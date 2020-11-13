@@ -1,0 +1,274 @@
+---
+title: "Walmart_Store_sales"
+author: "Dongjie Cheng"
+date: "11/6/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+```{r load-packages, include=FALSE}
+library(tidyverse)
+library(caret)
+library(data.table)
+library(dplyr)
+library(magrittr) 
+library(png) 
+library(lubridate) 
+library(wesanderson)
+library(viridis)
+options(digits = 5)
+# New location on GitHub
+url<- "https://raw.githubusercontent.com/dongjiecheng/walmart_Store_Sales/main/Walmart_Store_sales.csv"
+
+#read in data
+dat<-read_csv(url)
+
+```
+# Introduction 
+
+  This project was originally posted on kaggle.com. Its webpage is: <https://www.kaggle.com/aditya6196/retail-analysis-with-walmart-data>. Because Kaggle requires user logon information, I transferred it to my Github sire. The csv format dataset contains weekly in-store sales of _6435_ records of _45_ Walmart stores in _143_ weeks per store.  The time period is from 2010-02-05 to 2012-11-01. Moreover, the author also propose a series of task requirements to the competitors. In this study, I assume the sales values in the dataset are in **US Dollars**, although the author did not mention it explicitly. Basically, one need run basic statistics analysis and build a linear model to predict the demand for Store 1. In this study, I will follow the their requirement, however, will add more advanced algorithm at the prediction research. Below table contains the tasks:
+  
+  
+   Basic statistics tasks|Statistical Model  
+  |-------------------------|-------------------|
+  | 1. Store with maximum Sales| 1. prediction models to forecast demand|
+   | 2. Store with maximum standard deviation and its coefficient of mean| |
+  | 3. Store(s) with good quarterly growth in Q3, 2012| |
+  | 4. Holidays with higher sales than the mean sales in non-holidays for all stores| |
+   | 5. Monthly and semester view of sales in units and insights| |
+Meanwhile, I will also use 
+
+# Data Manupilation and Exploratory Analysis
+
+  The dataset was provided in csv format. It contains _6435_ records representing _45_ stores and _143_ weeks.
+  
+```{r, cache=TRUE, comment=NA, warning=FALSE, message = FALSE}
+#summary
+glimpse(dat)
+
+```
+  There are _8_ features. Their names and explanation are provided by the author and listed in the following table. The **Weekly_Sales** represents our outcome to be predicted and other _7_ features could be our input for prediction. Also, we need run **exploratory analysis** to complete those tasks above. 
+  
+  Name|Explanation|
+  |-------------------------|-------------------|
+  |Store | the store number|
+  |Date | the week of sales|
+|Weekly_Sales | sales for the given store|
+|Holiday_Flag | whether the week is a special holiday week 1 – Holiday week 0 – Non-holiday week|
+|Temperature  |Temperature on the day of sale|
+|Fuel_Price |Cost of fuel in the region|
+|CPI | Prevailing consumer price index|
+|Unemployment | Prevailing unemployment rate|
+
+```{r, cache=TRUE, warning=FALSE, message = FALSE, comment=NA}
+
+
+#class of variables
+#lapply(dat, class)
+#check NA
+sapply(dat, function(x)
+  sum(is.na(x)))
+```
+
+## Data Cleaning and Manipulation
+
+  The dataset was provided clean with no empty cells. However, the **Date** column has different formats as shown above. By research, I found that all dates are in either"**dd/mm/yy**" or "**dd-mm-yy**". First, let us convert all dates into "**dd-mm-yy**" format as the following. Then, create a column **Day_class** based on **Holiday_Flag** to reflect the holiday names. Now we have the dataset ready for analysis.  
+```{r, cache=TRUE, warning=FALSE, message = FALSE, comment=NA}
+# Date format conversion 
+ndat<-dat%>%mutate(Date=dmy(dat$Date),nDate=as.numeric(Date))%>%mutate(
+  Holiday_Flag=factor(Holiday_Flag),
+  Day_class=ifelse(Holiday_Flag==1,"Holiday","Normalday")
+)
+index<-as.character(ndat$Date)%in%c("2010-02-12","2011-02-11","2012-02-10","2013-02-08")
+ndat$Day_class[index]<-"Super_Bowl"
+index<-as.character(ndat$Date)%in%c("2010-09-10","2011-09-09","2012-09-07","2013-09-06")
+ndat$Day_class[index]<-"Labor_Day"
+index<-as.character(ndat$Date)%in%c("2010-11-26","2011-11-25","2012-11-23","2013-11-29")
+ndat$Day_class[index]<-"Thanksgiving"
+index<-as.character(ndat$Date)%in%c("2010-12-31","2011-12-30","2012-12-28","2013-12-27")
+ndat$Day_class[index]<-"Christmas"
+ndat%>%count(Day_class)
+```
+## Exploratory Analysis
+  Also, we can prove that there are  _143_ records uniformly for each store as shown below. The map next can further prove that there are identical dates for all stores and there are no missing weeks for any store.
+  Here, let us try to answer the questions assigned by **basic statistics tasks** above and look insight for **Data Analysis** in next section. First, the **Weekly_Sales** have a skewed distribution in _log_ scale with the peak about _\(1\times 10^{6}\)_ as shown in the figure below. 
+```{r, cache=TRUE, warning=FALSE, message = FALSE, comment=NA}
+# Check days
+ndat%>%group_by(Store)%>%summarise(sum=n())%>%.$sum
+
+# check date distribution
+ndat%>%group_by(Date)%>%ggplot(aes(Date,Store,color=Day_class))+geom_point(size=0.01)
+
+# histogram plots
+ndat%>%group_by(Weekly_Sales)%>%
+  ggplot(aes(Weekly_Sales))+geom_histogram(fill="blue",color="red")+scale_x_log10()+  
+  scale_fill_brewer(palette = "Spectral")+theme_dark() +guides(color = "none")+
+  labs(title = "Histogram of Weekly_Sales", y = "count", x = "rating", caption="Walmart Stores Sales")
+
+```
+### Task 1 and 2
+  Next figure shows the **total store sales** in _143_ weeks. Overall, the sales are random with respect to the store numbers. Meanwhile, we can easily identify that Store _20_ has the maximum accumulated sales among the stores. The **mean store sales** (red) are shown in the left for each store with error bars (blue). Same as the total sales, the **mean store sales** are also random. Store _4_ and _20_ are the top two stores with the highest, but close **mean sales**. Store _4_ and _20_ are the top two stores with the highest, but close **mean sales**. Also, their standard error are too small compared to the sales values. Therefore, we use another figure next it to shows the standard deviations and the corresponding standard errors of each store. Clearly Store _14_ has the maximum standard deviation. 
+
+
+```{r,  cache=TRUE, warning=FALSE, message = FALSE, comment=NA}
+# store total sales 
+ndat%>%group_by(Store)%>%summarize(whole_sale=sum(Weekly_Sales))%>%
+  ggplot() +
+  geom_line(aes(Store,whole_sale,color="blue"))+geom_point(aes(Store,whole_sale,color="blue"))+
+  labs(title = "Plot of total store sales", y = "sales", x = "store number", caption="Walmart Stores Sales")
+```
+```{r,  cache=TRUE, figures-side, fig.show="hold", out.width="50%",cache=TRUE, warning=FALSE, message = FALSE, comment=NA}
+# store sales mean barplot
+ndat%>%group_by(Store)%>%summarize(sale_mean=mean(Weekly_Sales),std=sd(Weekly_Sales),n=n())%>%
+  mutate(low=sale_mean-std/sqrt(n),high=sale_mean+std/sqrt(n))%>%
+  ggplot(aes(Store,sale_mean))+ scale_y_log10()+ 
+  geom_point(color="red")+
+  geom_errorbar(aes(ymin=low, ymax=high), color="blue", width=.9, position=position_dodge(.9))+
+  labs(title = "Bar plot of store sales", y = "store sales mean", 
+       x = "store number", caption="Walmart Stores Sales")
+
+# store sales standard deviation and standard errors line plots
+ndat%>%group_by(Store)%>%summarize(sale_mean=mean(Weekly_Sales),std=sd(Weekly_Sales),n=n())%>%
+  mutate(ste=std/sqrt(n))%>%
+  ggplot() +
+  geom_line(aes(Store,std,color="blue"))+geom_point(aes(Store,std,color="blue"))+
+  geom_line(aes(Store,ste,color="red"))+geom_point(aes(Store,ste,color="red"))+
+  scale_color_discrete(name="Errors",labels=c("Standard deviation","standard error"))+
+  labs(title = "Plot of store sales standard deviatiob and standard error", 
+       y = "error", x = "store number", caption="Walmart Stores Sales")
+```
+
+  Further investigation can also approve that mentioned above. Store _20_ has the maximum **total store sales** and the maximum **mean store sales**, which are _$301397792_ and _$2107677_ respectively. Meanwhile, Store _14_ has the **mean store sales** of _$317570_.  
+  
+```{r,  cache=TRUE, warning=FALSE, message = FALSE, comment=NA}
+
+# store with maximum total sales
+mTotal_store<-ndat%>%group_by(Store)%>%summarize(whole_sale=sum(Weekly_Sales),
+                                                 sale_mean=mean(Weekly_Sales))%>%
+  summarize(max_whole_sale=max(whole_sale),store_max_whole_sale=Store[which.max(whole_sale)])
+  
+# store with maximum mean sales  
+mMean_store<-ndat%>%group_by(Store)%>%summarize(sale_mean=mean(Weekly_Sales),
+                                                std=sd(Weekly_Sales))%>%
+  summarize(max_mean=(max(sale_mean)),store_max_mean=Store[which.max(sale_mean)])
+
+# store with maximum standard deviation
+mStd_store<-ndat%>%group_by(Store)%>%summarize(sale_mean=mean(Weekly_Sales),std=sd(Weekly_Sales))%>%
+  summarize(max_standard_deviation=(max(std)),store_max_standard_deviation=which.max(std),
+            store_mean=sale_mean[which.max(std)] )
+
+```
+ The coefficient of variation  is defined as:
+ \[c=\frac{\sigma}{\mu}\],
+ where \(c\) denotes the coefficient, \(\mu\) denotes the **mean** and \(\sigma\) denotes the **standard deviation**. Therefore, the coefficient for Store _14_ is:
+   
+```{r,  cache=TRUE, warning=FALSE, message = FALSE, comment=NA}
+ coeff<-mStd_store$max_standard_deviation/mStd_store$store_mean
+ coeff
+``` 
+### Task 3  
+  Regarding to the growth issue of Q3, 2012 (**Task 3**) above, let us assume the **good quarterly growth** store is the store who has the highest quarterly **sale increase**. We first read the sales data of Q2 and Q3 stored in **_q2\_3\_sales_** below. Second, we find that there are _13_ weeks for each quarter. Therefore, it is fair to compare the sales directly. Summing the total sales for each store in Q2 and Q3, we compare them in the following figure. Intuitively, we may see the majority losing money in Q3.
+```{r,  cache=TRUE,  warning=FALSE, message = FALSE, comment=NA}  
+# Q3 2012 growth
+# all Q 2&3 2012 sales
+q2_3_sales_all<-ndat%>%filter(Date>"2012-03-31"&Date<"2012-09-01")%>%mutate(quarter=ifelse(Date>"2012-06-30",3,2))
+
+# count weeks
+q2_3_sales_all%>%filter(Store==1)%>%count(quarter)
+
+# select Q 2&3 sales
+q2_3_sales<-q2_3_sales_all%>% group_by(Store,quarter)%>%summarize(quarter_sales=sum(Weekly_Sales))%>%
+  mutate(Store=as.factor(Store),quarter=as.factor(quarter))
+# Q 2&3 2012 sales plot
+q2_3_sales%>%arrange(quarter)%>%ggplot(aes(Store,quarter_sales,fill=quarter))+geom_col(position = "dodge")+
+ scale_fill_manual(values = alpha(c("blue", "red"), .9))+
+labs(title = "Plot of store sales, quater 2&3, 2012", y = "sales", x = "store number", caption="Walmart Stores Sales")
+
+```
+  Furthermore, let us compute the Q3 growth as do the following codes. Here we compute two **increases**: **Dollar** values and relative **percentage** values. The two side by side figures show the **store sale growth**. Clearly, the most stores' **sale growth** is negative. However, Store **_7_** becomes a **"star"**. It is definitely the best performers no matter in terms of total Dollars or percentages. Moreover, the computation agrees with this and tells us the numbers respectively: **_$971,928_** and **_13.3%_** respectively. Also, we know that Store **_14_** is the **worst** performer in either way.  
+
+```{r,  cache=TRUE, figures-side2, fig.show="hold", out.width="50%",cache=TRUE, warning=FALSE, message = FALSE, comment=NA}
+# Q3 growth compute & plot
+
+# Q3 absolute growth
+q3_abs_grow<-q2_3_sales%>%group_by(Store)%>%
+  summarize(quarter_grow=(quarter_sales-lag(quarter_sales)))%>%
+  filter(!is.na(quarter_grow))
+
+# Q3 abs&relative growth
+q3_grow<-q2_3_sales%>%filter(quarter==2)%>%left_join(q3_abs_grow)%>%
+  mutate(percent=quarter_grow/quarter_sales*100,Store=as.numeric(Store))
+
+# Q3 abs&relative growth
+q3_grow<-q2_3_sales%>%filter(quarter==2)%>%left_join(q3_abs_grow)%>%
+  mutate(percent=quarter_grow/quarter_sales*100,Store=as.numeric(Store))
+
+# best performance stores 
+best_quart_dollar<-q3_grow%>%ungroup()%>%summarize(best_dollar=max(quarter_grow), best_dollar_store=Store[which.max(quarter_grow)],
+                                       best_percent=max(percent),best_percent_store=Store[which.max(percent)])
+best_quart_dollar
+
+# Q3 abs growth plot 
+q3_grow%>%ggplot(aes(x=Store)) +
+  geom_line(aes(y=quarter_grow), size=1, color="red") +geom_point(aes(y=quarter_grow))+ 
+  scale_color_discrete(name="Growth",labels=c("Absolute value","Percentage"))+
+  labs(title = "Plot of store sales growth, quater 3, 2012", x="store number", y="sales growth ($)", caption="Walmart Stores Sales")
+
+# Q3 relative growth plot 
+q3_grow%>%ggplot(aes(x=Store)) +
+  geom_line(aes(y=percent), size=1, color="blue") +geom_point(aes(y=percent))+ 
+  labs(title = "Plot of store sales growth, quater 3, 2012", x="store number", y="sales growth (percentage)", caption="Walmart Stores Sales")
+
+```
+
+### Task 4  
+  
+  For  "holidays with higher sales than the mean sales in non-holidays for all stores", first, we split the holiday and non-holiday sales. Then, compute the holiday means and the non-holiday mean for each store in the following chunk of codes. The figure further shows that the box plot of the holidays' weekly sales compared to their means  and the mean weekly sales for all stores. From the figure and the numbers, we can derive that except **Christmas**, the other _3_ holidays have higher mean sales than the non-holidays' mean sales, although the **Labor day's** is very close. The **Thanksgiving** sale is the highest, probably because of **Black Friday**. Moreover, it is very interesting to that the **uncertainty** increases along with the sales. As a reference, the box plot of the non-holiday store sales is also present here. The stores with smaller sales also has smaller uncertainty.           
+
+```{r,  cache=TRUE, warning=FALSE, message = FALSE, comment=NA}
+
+# holiday store sale 
+holiday_sale<-ndat%>%filter(Holiday_Flag==1)
+
+# holiday store mean sale per individual holiday 
+holiday_mean<-ndat%>%filter(Holiday_Flag==1)%>%group_by(Day_class)%>%summarize(mean_sale=mean(Weekly_Sales ))
+holiday_mean
+
+# non-holiday store sales
+non_holiday_sale<-ndat%>%filter(Holiday_Flag==0)%>%group_by(Store)
+# non-holiday mean store sales
+non_holiday_mean<-ndat%>%filter(Holiday_Flag==0)%>%ungroup()%>%summarize(nonholiday_mean_sale=mean(Weekly_Sales ))
+non_holiday_mean
+
+# store sales each holiday compared to non-holiday sales, plot
+holiday_sale%>%group_by(Day_class)%>%mutate(mean_sale=mean(Weekly_Sales))%>%
+  ggplot(aes(Day_class,Weekly_Sales ))+geom_boxplot()+
+  geom_line(aes(Day_class,mean_sale,group=1),color="blue")+
+  geom_point(aes(Day_class,mean_sale,group=1),color="blue")+
+  geom_text(aes(4,1471273,label="holiday mean", vjust=-0.5),color="blue")+
+  geom_hline(yintercept=1041256,size=1., color="red",linetype="dashed")+ 
+  geom_text(aes(4,1041256,label="non-holiday mean", vjust=-0.5),color="red")+
+     labs(title = "Plot of store holiday sales", x="store number", y="weekly sales($)", caption="Walmart Stores Sales")
+
+# non-holiday sales for each store, plot
+non_holiday_sale%>%mutate(Store=as.factor(Store))%>%ggplot(aes(Store,Weekly_Sales ))+geom_boxplot()+
+labs(title = "Plot of store non-holiday sales", x="store number", y="sales($)", caption="Walmart Stores Sales")
+```
+
+### Task 5 
+
+  First, let us assume the **Semester sale** is **quarterly sale**. The code below monthly
+# Conclusion
+
+  The MovieLens provides us a typical large clean movie review dataset with _6_ features. I have tested _5_ models to build a **Movie Recommendation System**. The model features increases from small to large number models. Accordingly, the **RMSE** also decreased, when we applied the models in the same sequence. It turns out that Model 5 with regularized **movieId** and **useId**, and **genre** factor, gives us an optimal result with **RMSE** of _0.86460_. It is smaller than the required criterion of _0.86490_ by the assignment. Therefore, my project has achieved its goal. 
+  The store sales provides quite lot information. What I have done still pieces of. There is a lot of useful information to expore in the future.
+  Meanwhile, I have studied **three** input factors in this project. In the future, I will study the effect of the **timestamp** factor and possible regularization on the all contributors. 
+
+# Reference
+
+* https://courses.edx.org/courses/course-v1:HarvardX+PH125.8x+2T2020/course/
+  
+* https://grouplens.org/datasets/movielens/
