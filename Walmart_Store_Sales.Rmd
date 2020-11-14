@@ -1,5 +1,5 @@
 ---
-title: "Walmart_Store_sales"
+title: "Walmart Store Sales"
 author: "Dongjie Cheng"
 date: "11/6/2020"
 output: pdf_document
@@ -34,7 +34,7 @@ dat<-read_csv(url)
   
    Basic statistics tasks|Statistical Model  
   |-------------------------|-------------------|
-  | 1. Store with maximum Sales| 1. prediction models to forecast demand|
+  | 1. Store with maximum Sales| 1. prediction models to forecast demand for Store 1: hypothesize if CPI, unemployment, and fuel price have any impact on sales|
    | 2. Store with maximum standard deviation and its coefficient of mean| |
   | 3. Store(s) with good quarterly growth in Q3, 2012| |
   | 4. Holidays with higher sales than the mean sales in non-holidays for all stores| |
@@ -93,23 +93,30 @@ ndat$Day_class[index]<-"Christmas"
 ndat%>%count(Day_class)
 ```
 ## Exploratory Analysis
-  Also, we can prove that there are  _143_ records uniformly for each store as shown below. The map next can further prove that there are identical dates for all stores and there are no missing weeks for any store.
+
+  Also, we can prove that there are  _143_ records uniformly for each store as shown below. The map next can further prove that there are identical dates for all stores and there are no missing weeks for any store. Also, we know that the ending week day is **Friday**. The start date is `r min(ndat$Date)` and ending date is `r max(ndat$Date)`. Therefore, we do not have full year data for _2010_ and _2012_.
   Here, let us try to answer the questions assigned by **basic statistics tasks** above and look insight for **Data Analysis** in next section. First, the **Weekly_Sales** have a skewed distribution in _log_ scale with the peak about _\(1\times 10^{6}\)_ as shown in the figure below. 
 ```{r, cache=TRUE, warning=FALSE, message = FALSE, comment=NA}
 # Check days
 ndat%>%group_by(Store)%>%summarise(sum=n())%>%.$sum
 
 # check date distribution
-ndat%>%group_by(Date)%>%ggplot(aes(Date,Store,color=Day_class))+geom_point(size=0.01)
+ndat%>%group_by(Date)%>%ggplot(aes(Date,Store,color=Day_class))+geom_point(size=0.01)+
+  labs(title = "Map of dates", y = "store", x = "dates", caption="Walmart Stores Sales")
+
+# how many week days 
+ndat%>%mutate(weekday=weekdays(Date))%>%summarize(week_days=unique(weekday))
 
 # histogram plots
 ndat%>%group_by(Weekly_Sales)%>%
   ggplot(aes(Weekly_Sales))+geom_histogram(fill="blue",color="red")+scale_x_log10()+  
-  scale_fill_brewer(palette = "Spectral")+theme_dark() +guides(color = "none")+
-  labs(title = "Histogram of Weekly_Sales", y = "count", x = "rating", caption="Walmart Stores Sales")
+  scale_fill_brewer(palette = "Spectral")+guides(color = "none")+
+  labs(title = "Histogram of Weekly_Sales", y = "count", x = "weekly sales($)", caption="Walmart Stores Sales")
 
 ```
+
 ### Task 1 and 2
+
   Next figure shows the **total store sales** in _143_ weeks. Overall, the sales are random with respect to the store numbers. Meanwhile, we can easily identify that Store _20_ has the maximum accumulated sales among the stores. The **mean store sales** (red) are shown in the left for each store with error bars (blue). Same as the total sales, the **mean store sales** are also random. Store _4_ and _20_ are the top two stores with the highest, but close **mean sales**. Store _4_ and _20_ are the top two stores with the highest, but close **mean sales**. Also, their standard error are too small compared to the sales values. Therefore, we use another figure next it to shows the standard deviations and the corresponding standard errors of each store. Clearly Store _14_ has the maximum standard deviation. 
 
 
@@ -260,7 +267,95 @@ labs(title = "Plot of store non-holiday sales", x="store number", y="sales($)", 
 
 ### Task 5 
 
-  First, let us assume the **Semester sale** is **quarterly sale**. The code below monthly
+  First, I assume the **Semester sale** is **quarterly sale**. The code below creates necessary variables for the analysis: **month**,  **quarter** and **year**. Furthermore, because the weeks are not evenly distributed in each month or quarter, the two side-side figures shows numbers of the weekly sales per store are not evenly distributed as well. Moreover, there are missing **January** for _2010_ and missing **November** and **December**. As a result,  it does not make sense to compute the total sales for each month or quarter rather we focus on the mean values. 
+  
+```{r,  cache=TRUE, figures-side3, fig.show="hold", out.width="50%", warning=FALSE, message = FALSE, comment=NA}
+
+# create variables: month, year, quarter
+ndat1<-ndat%>%mutate(month=month(Date),year=year(Date))
+
+# delete nDate
+ndat1<-ndat1[-9]
+
+#set up quarters
+ndat1<-ndat1%>%mutate(quarter=1)
+# quarter 2
+index<-ndat1$month>=4 & ndat1$month<=6
+ndat1$quarter[index]<-2
+# quarter 3
+index<-ndat1$month>=7 & ndat1$month<=9
+ndat1$quarter[index]<-3
+# quarter 4
+index<-ndat1$month>=10 & ndat1$month<=12
+ndat1$quarter[index]<-4  
+
+# make month, year, quarter factors
+ndat1<-ndat1%>%mutate(month=as.factor(month),year=as.factor(year),quarter=as.factor(quarter))
+
+# weeks per month plot
+ndat1%>%filter(Store==1)%>%ggplot(aes(month,fill=year))+geom_bar(position = "dodge")+
+labs(title = "Plot of count of weeks per month", x="month", y="week numbers", caption="Walmart Stores Sales")
+
+# weeks per quarter plot
+ndat1%>%filter(Store==1)%>%ggplot(aes(quarter,fill=year))+geom_bar(position = "dodge")+
+labs(title = "Plot of count of weeks per quarter", x="quarter", y="week numbers", caption="Walmart Stores Sales")
+
+
+```  
+  For the monthly sales, below are  are the box plot of the monthly sales of all stores and the bar plot of the monthly mean sales of the all stores.  Although, there are missing data, we can still find a general pattern. The stores have worst sales in **January**. Then there is a jump in **February**. Interestingly, the month is the **fourth** best month in the year andf much better than the adjacent months. After that, the sales grow gradually up to the **middle** year.  Since then, the sales slide slowly to the **starting** of the holiday season. The best sales come from **November** and **December**, even though we are missing the data for _2012_. Year-wise, _2011_ these stores have a bad year. Most months, the stores have smaller and close sales than the previous year, except **October** and **November**. In year _2012_, the sales bounced back and even better than year _2010_. Also, we notice that the high end outliers in **November** and **December**     
+  
+```{r,  cache=TRUE, figures-side4, fig.show="hold", out.width="50%", warning=FALSE, message = FALSE, comment=NA}
+
+# monthly sale box plot
+ndat1%>%group_by(year,month)%>%
+  ggplot(aes(month,Weekly_Sales,color=year))+geom_boxplot()+
+  labs(title = "Plot of monthly sales", x="month", y="sale($)", caption="Walmart Stores Sales")
+
+# monthly mean sale bar plot
+ndat1%>%group_by(year,month)%>%summarise(mean_sale_month=mean(Weekly_Sales))%>%
+  ggplot(aes(month,mean_sale_month,fill=year))+geom_col(position = "dodge")
+labs(title = "Plot of monthly mean sales", x="month", y="sale($)", caption="Walmart Stores Sales")
+```
+  Talking about the quarterly sales, below are  are the box plot and the bar plot of the quarterly mean sales of the all stores. As shown in the monthly figures,  we miss the sales of **January**, year _2010_ and sales of **November** and **December**, 2012. Therefore, we have to exclude the corresponding data of quarter _1_, _2010_ and quarter _4_, _2012_. Looking at the figures below, we can derive 
+a similar pattern. Quarter _1_ is the worst and Quarter _2_ becomes better. Then, Quarter _3_ gets worse. Finally, Quarter _4_ gets a big jump and is the best each year.  
+  
+```{r,  cache=TRUE, figures-side5, fig.show="hold", out.width="50%", warning=FALSE, message = FALSE, comment=NA}  
+
+# quarterly sale box plot
+ndat1%>%group_by(year,quarter)%>%
+  ggplot(aes(quarter,Weekly_Sales,color=year))+geom_boxplot()+
+  labs(title = "Plot of quaterly sales", x="month", y="sale($)", caption="Walmart Stores Sales")
+
+# quarter mean sale bar plot
+ndat1%>%group_by(year,quarter)%>%summarise(mean_sale_quarter=mean(Weekly_Sales))%>%
+  ggplot(aes(quarter,mean_sale_quarter,fill=year))+geom_col(position = "dodge")+
+  labs(title = "Plot of quaterly mean sales", x="month", y="sale($)", caption="Walmart Stores Sales")
+
+```  
+Therefore,  
+
+# Modeling Data Analysis
+
+  In section, we address the **Statistical model** task and are going to work the data only for Store _1_. As discussed at beginning, there are _143_ record for the store. We first create a new dataset called **_ndat2_** by choosing the necessary parameters for the analysis as below. The first figure next shows the distribution of the sales that the sales are symmetric about \(1.5\times 10^6\) with some outliers at the upper side. 
+```{r,  cache=TRUE, warning=FALSE, message = FALSE, comment=NA}  
+# create data only for data analysis
+ndat2<-ndat1%>%filter(Store==1)%>%select(Weekly_Sales,Fuel_Price,CPI,Unemployment) 
+
+# histogram plot of sales
+ndat2%>%ggplot(aes(Weekly_Sales))+geom_histogram(fill="blue",color="red")+
+  labs(title = "Histogram of Weekly_Sales", y = "count", x = "weekly sales($)", caption="Walmart Stores Sales")
+
+```
+```{r,  cache=TRUE, figures-side6, fig.show="hold", out.width="50%", warning=FALSE, message = FALSE, comment=NA}  
+
+ndat2%>%ggplot(aes(Fuel_Price,Unemployment, color=Weekly_Sales))+geom_point(size=3)+geom_smooth()+
+  scale_color_gradient2(low="black", mid="yellow", high="white", 
+                        midpoint=1800000, limits=range(ndat2$Weekly_Sales))
+
+ndat2%>%ggplot(aes(Fuel_Price,CPI, color=Weekly_Sales))+geom_point(size=3)+
+  scale_color_gradient2(low="black", mid="yellow", high="white", 
+                        midpoint=1800000, limits=range(ndat2$Weekly_Sales))
+```
 # Conclusion
 
   The MovieLens provides us a typical large clean movie review dataset with _6_ features. I have tested _5_ models to build a **Movie Recommendation System**. The model features increases from small to large number models. Accordingly, the **RMSE** also decreased, when we applied the models in the same sequence. It turns out that Model 5 with regularized **movieId** and **useId**, and **genre** factor, gives us an optimal result with **RMSE** of _0.86460_. It is smaller than the required criterion of _0.86490_ by the assignment. Therefore, my project has achieved its goal. 

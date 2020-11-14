@@ -56,7 +56,11 @@ sum(is.na(ndat$Date))
 ndat%>%group_by(Store)%>%summarise(sum=n())%>%.$sum
 
 # check date distribution
-ndat%>%group_by(Date)%>%ggplot(aes(Date,Store,color=Day_class))+geom_point(size=0.01)
+ndat%>%group_by(Date)%>%ggplot(aes(Date,Store,color=Day_class))+geom_point(size=0.01)+
+  labs(title = "Map of dates", y = "store", x = "dates", caption="Walmart Stores Sales")
+
+# how many week days 
+ndat%>%mutate(weekday=weekdays(Date))%>%summarize(week_days=unique(weekday))
 
 # map view
 mid<-mean(dat$Weekly_Sales)
@@ -233,55 +237,84 @@ ndat1$quarter[index]<-4
 # make month, year, quarter factors
 ndat1<-ndat1%>%mutate(month=as.factor(month),year=as.factor(year),quarter=as.factor(quarter))
 
-ndat1%>%ggplot(aes(month,fill=year))+geom_bar(position = "dodge")+theme_dark()+
-labs(title = "Plot of count of weeks per month", x="store number", y="week numbers", caption="Walmart Stores Sales")
+# weeks per month plot
+ndat1%>%filter(Store==1)%>%ggplot(aes(month,fill=year))+geom_bar(position = "dodge")+
+labs(title = "Plot of count of weeks per month", x="month", y="week numbers", caption="Walmart Stores Sales")
 
-ndat1%>%ggplot(aes(quarter,fill=year))+geom_bar(position = "dodge")+theme_dark()
+# weeks per quarter plot
+ndat1%>%filter(Store==1)%>%ggplot(aes(quarter,fill=year))+geom_bar(position = "dodge")+
+labs(title = "Plot of count of weeks per quarter", x="quarter", y="week numbers", caption="Walmart Stores Sales")
 
-ndat1%>%group_by(year,month)%>%ggplot(aes(month,Weekly_Sales,color=year))+geom_boxplot()
+# monthly sale box plot
+ndat1%>%group_by(year,month)%>%mutate(mean_sale=mean(Weekly_Sales))%>%
+ggplot(aes(month,Weekly_Sales,color=year,middle=mean(Weekly_Sales)))+geom_boxplot()+
+labs(title = "Plot of monthly sales", x="month", y="sale($)", caption="Walmart Stores Sales")
+  
+# monthly mean sale bar plot
+ndat1%>%group_by(year,month)%>%summarise(mean_sale_month=mean(Weekly_Sales))%>%
+  ggplot(aes(month,mean_sale_month,fill=year))+geom_col(position = "dodge")+
+labs(title = "Plot of monthly mean sales", x="month", y="sale($)", caption="Walmart Stores Sales")
+
+# monthly sale box plot
+ndat1%>%group_by(year,month)%>%
+  ggplot(aes(month,Weekly_Sales,color=year))+geom_boxplot()+
+  labs(title = "Plot of monthly sales", x="month", y="sale($)", caption="Walmart Stores Sales")
+
+# monthly mean sale bar plot
+ndat1%>%group_by(year,month)%>%summarise(mean_sale_month=mean(Weekly_Sales))%>%
+  ggplot(aes(month,mean_sale_month,fill=year))+geom_col(position = "dodge")+
+  labs(title = "Plot of monthly mean sales", x="month", y="sale($)", caption="Walmart Stores Sales")
 
 
+# quarterly sale box plot
+ndat1%>%group_by(year,quarter)%>%
+  ggplot(aes(quarter,Weekly_Sales,color=year))+geom_boxplot()+
+  labs(title = "Plot of quaterly sales", x="month", y="sale($)", caption="Walmart Stores Sales")
 
+# quarter mean sale bar plot
+ndat1%>%group_by(year,quarter)%>%summarise(mean_sale_quarter=mean(Weekly_Sales))%>%
+  ggplot(aes(quarter,mean_sale_quarter,fill=year))+geom_col(position = "dodge")+
+  labs(title = "Plot of quaterly mean sales", x="month", y="sale($)", caption="Walmart Stores Sales")
+
+####################### Modeling Data Analysis **** 
 
 # Single store sales
+# Store 1 monthly sale box plot
+ndat1%>%group_by(year,month)%>%filter(Store==1)%>%
+  ggplot(aes(month,Weekly_Sales,color=year))+geom_boxplot()+
+  labs(title = "Plot of monthly sales", x="month", y="sale($)", caption="Walmart Stores Sales")
 
-mid=median(dat$Store)
-holiday_sale<-ndat%>%filter(Holiday_Flag==1)%>%group_by(Store)
-holiday_sale%>%filter(Store==1)%>%ggplot(aes(Day_class,Weekly_Sales ))+geom_boxplot()
+# Store 1 quarterly sale box plot
+ndat1%>%group_by(year,quarter)%>%filter(Store==1)%>%
+  ggplot(aes(quarter,Weekly_Sales,color=year))+geom_boxplot()+
+  labs(title = "Plot of quaterly sales", x="month", y="sale($)", caption="Walmart Stores Sales")
 
+# create data only for data analysis
+ndat2<-ndat1%>%filter(Store==1)%>%select(Weekly_Sales,Fuel_Price,CPI,Unemployment) 
+  
+  
+# histogram plot of sales
+ndat2%>%ggplot(aes(Weekly_Sales))+geom_histogram(fill="blue",color="red")+
+  labs(title = "Histogram of Weekly_Sales", y = "count", x = "weekly sales($)", caption="Walmart Stores Sales")
 
-dat%>%filter(Store==1)%>%ggplot(aes(Date,Weekly_Sales))+geom_line()
-dat%>%group_by(Store)%>%filter(Store==c(seq(1:10)))%>%ggplot(aes(ndate,Weekly_Sales,color=Store))+
-  geom_line()+scale_color_gradient2(midpoint=mid, low="red", mid="green",
-                      high="blue", space ="Lab" )
+# parameter relationship plot
+ndat2%>%ggplot(aes(Fuel_Price,Unemployment, color=Weekly_Sales))+geom_point(size=3)+
+  scale_color_gradient2(low="black", mid="yellow", high="white", 
+                        midpoint=1800000, limits=range(ndat2$Weekly_Sales))
 
-p_store<-sample(seq(1:45),5, replace = FALSE)
-d<-dat%>%group_by(Store)%>%filter(Store==p_store)
-d%>%ggplot(aes(ndate,Weekly_Sales,color=as.factor(Store),label=Store))+
-  geom_line()+scale_color_viridis( option = "D",discrete = TRUE)+geom_text()
+ndat2%>%ggplot(aes(Fuel_Price,CPI, color=Weekly_Sales))+geom_point(size=3)+
+  scale_color_gradient2(low="black", mid="yellow", high="white", 
+                        midpoint=1800000, limits=range(ndat2$Weekly_Sales))
 
-dat%>%ggplot(aes(ndate,Weekly_Sales,color=as.factor(Store)))+
-  geom_line()+scale_color_viridis( option = "D",discrete = TRUE)
-###scale_fill_viridis()+ theme_bw()
-
-mean_sale<-mean(dat$Weekly_Sales)
-dat%>%filter(Store==1)%>%ggplot(aes(x=Date,y=Holiday_Flag,fill=Weekly_Sales-mean_sale))+
-  geom_col()+scale_color_viridis( option = "B")
-
-# temperature vs sale 
-mid=median(dat$Store)
-dat%>%filter(Store==1)%>%ggplot(aes(Date,Weekly_Sales))+geom_line()
-dat%>%group_by(Store)%>%filter(Store==c(seq(1:10)))%>%ggplot(aes(ndate,Weekly_Sales,color=Store))+
-  geom_line()+scale_color_gradient2(midpoint=mid, low="red", mid="green",
-                                                                                                                                    high="blue", space ="Lab" )
-
+ndat2%>%ggplot(aes(Unemployment,CPI, color=Weekly_Sales))+geom_point(size=3)+
+  scale_color_gradient2(low="black", mid="yellow", high="white", 
+                        midpoint=1800000, limits=range(ndat2$Weekly_Sales))
+   
 # 
-hist(dat$CPI)
-hist(dat$Unemployment)
-hist(dat$ndate)
-hist(dat$Holiday_Flag)
-hist(dat$Temperature)
-hist(dat$Fuel_Price)
+hist(ndat2$CPI)
+hist(ndat2$Unemployment)
+hist(ndat2$Temperature)
+hist(ndat2$Fuel_Price)
 
 # split file
 set.seed(1, sample.kind = "Rounding")    # if using R 3.6 or later
@@ -291,7 +324,7 @@ test <- ndat_store1[test_index,]
 train <- ndat_store1[-test_index,]
 
 
-models <- c("glm", "svmLinear", "knn", "gamLoess", "multinom",  "rf" )
+models <- c("lm", "knn",  "multinom",  "rf" )
 
 model="rf"
 fit<-train( Weekly_Sales~CPI+Unemployment+Fuel_Price   , method = model, data = train)
@@ -299,4 +332,14 @@ y_hat<-predict(fit, test)
 rmse_glm <- RMSE(y_hat, test$Weekly_Sales)
 rmse_glm
 
+##########knn
+set.seed(2008)
+train_knn <- train(y ~ ., method = "knn", 
+                   data = mnist_27$train,
+                   tuneGrid = data.frame(k = seq(9, 71, 2)))
 
+############## monthly single store mean sale for all stores
+ndat1%>%group_by(Store,year,month)%>%summarise(mean_sale_month=mean(Weekly_Sales))%>%filter(year==2010)%>%
+  group_by(month,mean_sale_month)%>%ggplot(aes(as.numeric(month),mean_sale_month,color=as.factor(Store)))+
+  geom_smooth(se = FALSE)+scale_x_continuous(breaks = seq(1,12,1),name="store")+
+  labs(title = "Plot of monthly mean sales", x="month", y="sale($)", caption="Walmart Stores Sales")
