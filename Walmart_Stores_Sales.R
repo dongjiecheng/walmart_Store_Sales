@@ -297,6 +297,148 @@ ndat2<-ndat1%>%filter(Store==1)%>%select(Weekly_Sales,Fuel_Price,CPI,Unemploymen
 ndat2%>%ggplot(aes(Weekly_Sales))+geom_histogram(fill="blue",color="red")+
   labs(title = "Histogram of Weekly_Sales", y = "count", x = "weekly sales($)", caption="Walmart Stores Sales")
 
+
+
+ndat2%>%ggplot(aes(Weekly_Sales,CPI))+geom_point()+
+  scale_fill_manual(values = alpha(c("blue", "red"), .9))+
+  labs(title = "Plot of store sales, quater 2&3, 2012", y = "sales", x = "store number", caption="Walmart Stores Sales")
+
+
+
+# 
+hist(ndat2$CPI)
+hist(ndat2$Unemployment)
+hist(ndat2$Temperature)
+hist(ndat2$Fuel_Price)
+
+# partition
+set.seed(1, sample.kind = "Rounding")    # if using R 3.6 or later
+test_index <- createDataPartition(ndat2$Weekly_Sales, times = 1, p = 0.5, list = FALSE)
+test <- ndat2[test_index,]
+train <- ndat2[-test_index,]
+
+# model 1: mu only
+mu <- mean(train$Weekly_Sales)
+y_hat <- mu
+rmse_1 <- RMSE(y_hat,test$Weekly_Sales)
+rmse_1
+rmse_results <- data_frame(method = "mu Only", model=1, RMSE = rmse_1)
+
+# model 2: mu + CPI 
+model="lm"
+fit<-train( Weekly_Sales~CPI, method = model, data = train)
+y_hat<-predict(fit, test)
+rmse_2 <- RMSE(y_hat, test$Weekly_Sales)
+rmse_2
+rmse_results <- bind_rows(rmse_results,
+                          data_frame(method = "mu + CPI",
+                                     model=2, RMSE = rmse_2))
+
+# model 3: mu + CPI + Unemployment 
+model="lm"
+fit<-train( Weekly_Sales~CPI+Unemployment, method = model, data = train)
+y_hat<-predict(fit, test)
+rmse_3 <- RMSE(y_hat, test$Weekly_Sales)
+rmse_3
+rmse_results <- bind_rows(rmse_results,
+                          data_frame(method = "mu + CPI + Unemployment",
+                                     model=3, RMSE = rmse_3))
+
+# model 4: mu + CPI + Unemployment + Fuel_Price
+model="lm"
+fit<-train( Weekly_Sales~CPI+Unemployment+Fuel_Price, method = model, data = train)
+y_hat<-predict(fit, test)
+rmse_4 <- RMSE(y_hat, test$Weekly_Sales)
+rmse_4
+rmse_results <- bind_rows(rmse_results,
+                          data_frame(method = "mu + CPI + Unemployment + Fuel_Price",
+                                     model=4, RMSE = rmse_4))
+fit$finalModel
+varImp(fit)
+
+# data mismatch
+plot(test$Weekly_Sales,col="red")
+lines(y_hat,col="blue",lwd=2)
+points(y_hat,col="blue",cex = .5)
+legend(1, 2300000, legend=c("Input", "Predicted"),
+       col=c("red", "blue"), lty=1:2, cex=0.8)
+
+#model 5: knn:  mu + CPI + Unemployment + Fuel_Price
+set.seed(2, sample.kind = "Rounding")
+model="knn"
+train_control <- trainControl(method="cv", number=5, p=0.9)
+fit<-train( Weekly_Sales~CPI+Unemployment+Fuel_Price, method = model, data = train,
+            tuneGrid = data.frame(k = seq(1, 71, 2)),trControl=train_control)
+ 
+y_hat<-predict(fit, test)
+rmse_5 <- RMSE(y_hat, test$Weekly_Sales)
+rmse_5
+rmse_results <- bind_rows(rmse_results,
+                          data_frame(method = "knn: mu + CPI + Unemployment + Fuel_Price",
+                                     model=5, RMSE = rmse_5))
+ggplot(fit)+
+labs(title = "Plot of store sales, quater 2&3, 2012", y = "sales", x = "store number", caption="Walmart Stores Sales")
+
+#minimum k
+fit$results$k[which.min(fit$results$RMSE)]
+
+# data mismatch
+plot(test$Weekly_Sales,col="red")
+lines(y_hat,col="blue",lwd=2)
+points(y_hat,col="blue",cex = .5)
+legend(1, 2300000, legend=c("Input", "Predicted"),
+       col=c("red", "blue"), lty=1:2, cex=0.8)
+
+#model 6: rf:  mu + CPI + Unemployment + Fuel_Price
+set.seed(3, sample.kind = "Rounding")
+model="rf"
+control <- trainControl(method="repeatedcv", number=10, repeats=3, search="random")
+fit<-train( Weekly_Sales~CPI+Unemployment+Fuel_Price, method = model, data = train, tuneGrid = data.frame(mtry = seq(1,70,10)),
+            ntree=100, trControl=control)
+y_hat<-predict(fit, test)
+rmse_6 <- RMSE(y_hat, test$Weekly_Sales)
+rmse_6
+rmse_results <- bind_rows(rmse_results,
+                          data_frame(method = "rf: mu + CPI + Unemployment + Fuel_Price",model=6,
+                                     RMSE = rmse_6))
+varImp(fit)
+
+plot(fit)
+
+# data mismatch
+plot(test$Weekly_Sales,col="red")
+lines(y_hat,col="blue",lwd=2)
+points(y_hat,col="blue",cex = .5)
+legend(1, 2300000, legend=c("Input", "Predicted"),
+       col=c("red", "blue"), lty=1:2, cex=0.8)
+
+
+##########knn
+
+
+control <- trainControl(method="repeatedcv", number=10, repeats=3, search="random")
+set.seed(3, sample.kind = "Rounding")
+model="rf"
+fit<-train( Weekly_Sales~CPI+Unemployment+Fuel_Price, method = model, data = train, tuneGrid = data.frame(mtry = seq(1,70,10)),
+            ntree=100, trControl=control)
+y_hat<-predict(fit, test)
+rmse_6 <- RMSE(y_hat, test$Weekly_Sales)
+rmse_6
+
+
+control <- trainControl(method="repeatedcv", number=10, repeats=3, search="random")
+set.seed(seed)
+mtry <- sqrt(ncol(x))
+rf_random <- train(Class~., data=dataset, method="rf", metric=metric, tuneLength=15, trControl=control)
+print(rf_random)
+
+
+############## monthly single store mean sale for all stores
+ndat1%>%group_by(Store,year,month)%>%summarise(mean_sale_month=mean(Weekly_Sales))%>%filter(year==2010)%>%
+  group_by(month,mean_sale_month)%>%ggplot(aes(as.numeric(month),mean_sale_month,color=as.factor(Store)))+
+  geom_smooth(se = FALSE)+scale_x_continuous(breaks = seq(1,12,1),name="store")+
+  labs(title = "Plot of monthly mean sales", x="month", y="sale($)", caption="Walmart Stores Sales")
+
 # parameter relationship plot
 ndat2%>%ggplot(aes(Fuel_Price,Unemployment, color=Weekly_Sales))+geom_point(size=3)+
   scale_color_gradient2(low="black", mid="yellow", high="white", 
@@ -309,37 +451,21 @@ ndat2%>%ggplot(aes(Fuel_Price,CPI, color=Weekly_Sales))+geom_point(size=3)+
 ndat2%>%ggplot(aes(Unemployment,CPI, color=Weekly_Sales))+geom_point(size=3)+
   scale_color_gradient2(low="black", mid="yellow", high="white", 
                         midpoint=1800000, limits=range(ndat2$Weekly_Sales))
-   
-# 
-hist(ndat2$CPI)
-hist(ndat2$Unemployment)
-hist(ndat2$Temperature)
-hist(ndat2$Fuel_Price)
-
-# split file
-set.seed(1, sample.kind = "Rounding")    # if using R 3.6 or later
-ndat_store1<-ndat%>%filter(Store==1)
-test_index <- createDataPartition(ndat_store1$Weekly_Sales, times = 1, p = 0.5, list = FALSE)
-test <- ndat_store1[test_index,]
-train <- ndat_store1[-test_index,]
 
 
 models <- c("lm", "knn",  "multinom",  "rf" )
 
-model="rf"
-fit<-train( Weekly_Sales~CPI+Unemployment+Fuel_Price   , method = model, data = train)
+# model 2: mu + CPI 
+model="lm"
+fit<-train( Weekly_Sales~Fuel_Price+Unemployment , method = model, data = train)
 y_hat<-predict(fit, test)
-rmse_glm <- RMSE(y_hat, test$Weekly_Sales)
-rmse_glm
+rmse_2 <- RMSE(y_hat, test$Weekly_Sales)
+rmse_2
 
-##########knn
-set.seed(2008)
-train_knn <- train(y ~ ., method = "knn", 
-                   data = mnist_27$train,
-                   tuneGrid = data.frame(k = seq(9, 71, 2)))
+ndat3<-ndat1%>%filter(Store==1)%>%select(Weekly_Sales,Fuel_Price,CPI,Unemployment,Date) 
+set.seed(1, sample.kind = "Rounding")    # if using R 3.6 or later
+test_index <- createDataPartition(ndat3$Weekly_Sales, times = 1, p = 0.5, list = FALSE)
+test1 <- ndat3[test_index,]
+train1 <- ndat3[-test_index,]
 
-############## monthly single store mean sale for all stores
-ndat1%>%group_by(Store,year,month)%>%summarise(mean_sale_month=mean(Weekly_Sales))%>%filter(year==2010)%>%
-  group_by(month,mean_sale_month)%>%ggplot(aes(as.numeric(month),mean_sale_month,color=as.factor(Store)))+
-  geom_smooth(se = FALSE)+scale_x_continuous(breaks = seq(1,12,1),name="store")+
-  labs(title = "Plot of monthly mean sales", x="month", y="sale($)", caption="Walmart Stores Sales")
+
