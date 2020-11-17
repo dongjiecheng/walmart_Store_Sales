@@ -27,9 +27,20 @@ glimpse(dat)
 #class of variables
 lapply(dat, class)
 
+# check Date formats
+unique(dat$Date)
+
 #check NA
 sapply(dat, function(x)
   sum(is.na(x)))
+
+
+# histogram plots
+dat%>%group_by(Weekly_Sales)%>%
+  ggplot(aes(Weekly_Sales))+geom_histogram(fill="blue",color="red")+scale_x_log10()+  
+  scale_fill_brewer(palette = "Spectral")+guides(color = "none")+
+  labs(title = "Histogram of Weekly_Sales", y = "count", x = "weekly sales($)", caption="Walmart Stores Sales")
+
 
 # # convert date to numeric
 ndat<-dat%>%mutate(Date=dmy(dat$Date),nDate=as.numeric(Date))%>%mutate(
@@ -146,7 +157,10 @@ q3_grow<-q2_3_sales%>%filter(quarter==2)%>%left_join(q3_abs_grow)%>%
   mutate(percent=quarter_grow/quarter_sales*100,Store=as.numeric(Store))
 
 ### best performance 
- 
+good_quart_store<-q3_grow%>%subset(quarter_grow>0)%>%
+  select(Store,quarter_grow, percent)%>%arrange(desc(percent))
+good_quart_store
+
 best_quart_dollar<-q3_grow%>%ungroup()%>%summarize(best_dollar=max(quarter_grow), best_dollar_store=Store[which.max(quarter_grow)],
                                        best_percent=max(percent),best_percent_store=Store[which.max(percent)])
 
