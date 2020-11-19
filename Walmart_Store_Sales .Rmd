@@ -1,12 +1,12 @@
 ---
 title: "Walmart Store Sales Prediction"
-author: "Dongjie"
+author: "Dongjie Cheng"
 date: "11/15/2020"
 header-includes:
 - \usepackage{graphicx}
 - \usepackage{fancyhdr}
 - \pagestyle{fancy}
-- \fancyhead[LO,LE]{Walmart Store Sales}
+- \fancyhead[LO,LE]{Walmart Store Sales Prediction}
 - \fancyhead[RO,RE]{Choose Your Own Project}
 - \fancyfoot[LO,LE]{Dongjie Cheng}
 - \fancyfoot[RE,RO]{\thepage}
@@ -42,8 +42,11 @@ options(digits = 5)
 
 \newpage
 # Introduction 
-  This project is based on a dataset of **Walmart Weekly Sales** originally posted on **kaggle.com**. Its webpage is: <https://www.kaggle.com/aditya6196/retail-analysis-with-walmart-data>. The csv format dataset, **Walmart_Store_sales.csv** contains the weekly in-store sales of _45_ Walmart stores in _143_ weeks, totally, _6435_ samples. The time period covers **2010-02-05** to **2012-11-01** of **143** weeks consecutively. Moreover, the author also proposed a series of task requirements to purposed competitors in a description file. Because Kaggle requires user logon information, I transferred both the data and description files to my Github site. In this paper, I will present my study as pretending competitor basically following the original requirement. However, I added nonlinear algorithms during the prediction study. The original requirement is linear regression. Because the original document did not mention the **unit** of the sales values, I assume it **US Dollars**.  Below table contains the task abstract from the author's assignment:
+  This project is based on a dataset of Walmart weekly sales originally posted on **kaggle.com**. The link is: [https://www.kaggle.com/aditya6196/retail-analysis-with-walmart-data](https://www.kaggle.com/aditya6196/retail-analysis-with-walmart-data). This posted dataset, **Walmart_Store_sales.csv**, contains  all weekly in-store sales of _45_ Walmart stores in _143_ weeks --- totally, _6435_ samples. The time period covers _143_ consecutive weeks from February 5, 2010 to November, 1, 2012. Moreover, the author also proposed a series of task requirements to the purposed competitors in a description file. Since Kaggle.com requires user logon information, I transferred both the data and description files to my Github site. As a result, my program will download the data file automatically from my Github rather than Kaggle.com. 
   
+  In this paper, I will present my study pretending as a competitor by following the original requirements. However, I also have to add extra nonlinear data analysis to meet the **HarvardX** course requirement, since the author only asks for linear regression. Finally, because the original description did not mention the **unit** of the sales values, I assume it is in **US Dollars**.  The following table lists the tasks from the author's assignment:
+  
+Table: Assignment of Walmart weekly sales prediction
   
    Basic statistics tasks|Statistical Model  
   |-------------------------|-------------------|
@@ -53,11 +56,11 @@ options(digits = 5)
   | 4. Holidays with higher sales than the mean sales in non-holidays for all stores| |
    | 5. Monthly and semester view of sales in units and insights| |
 
-Basically, it contains two parts. Sequentially, I will run the first part, **Basic statistics analysis**, in the section of **Data Manipulation and Exploratory Analysis** and the second part, **Statistical Model**, i.e., modeling prediction in the section next.
+For **Statistical Model** part, I removed linear regression requirement to make the task more general. Sequentially, I will address this two parts assignment. First, I will run **basic statistics analysis** in the section of **Data Manipulation and Exploratory Analysis**. Then, **Statistical Model** in **Modeling Data Analysis** section.
 
 # Data Manupilation and Exploratory Analysis
 
-  The dataset was provided in csv format having a size of _355 KB_. It contains _6435_ records matching exactly _45_ stores by _143_ weeks. By download, I create a data frame, **dat**, to hold the data. Its summary is also shown below.
+  The data file was provided in csv format having a size of _355 KB_. It contains _6435_ records matching exactly _45_ stores by _143_ weeks. By download, I create a data frame, **dat**, in R to hold all the samples. Its summary is shown below:
   
 ```{r, cache=TRUE, comment=NA, warning=FALSE, message = FALSE}
 # New location on GitHub
@@ -69,8 +72,10 @@ dat<-read_csv(url)
 glimpse(dat)
 
 ```
-  Easily we can find there are _8_ features. The author also provided their names and explanation listed in the following table. The **Weekly_Sales** represents our outcome to be predicted and other _7_ features could be our input for prediction. In this section, I will run **Data Cleaning and Manipulation** to have the data ready, then run **exploratory analysis** to complete the **Basic statistics tasks** listed in the top table above. 
-  
+  Easily we can find there are _8_ features. The author also provided their names and explanation and are listed in the following table. The **Weekly_Sales** represents our outcome to be predicted and other _7_ features would be our input for prediction. In this section, I will run **Data Cleaning and Manipulation** to have the data ready, then run **exploratory analysis** to complete the **basic statistics tasks** listed in the top table, Table 1. 
+
+Table: Explanation of the features
+
   Name|Explanation|
   |-------------------------|-------------------|
   |Store | the store number|
@@ -85,7 +90,7 @@ glimpse(dat)
 
 ## Data Cleaning and Manipulation
 
-  The following code shows the dataset has no empty cells and the frequency histogram of the **Weekly_Sales** in _log_ scale also shows the weekly sales have a reasonable distribution with the peak about _\(1\times 10^{6}\)_. There are no strange values. However, checking the **Date** column, we can find two different formats as shown by below code: "**dd/mm/yy**" and "**dd-mm-yy**". Thus, we must unify the formats. 
+  The following code shows the dataset has no empty cells and the frequency histogram of the **Weekly_Sales** in _log_ scale also shows the weekly sales have a reasonable distribution with the peak about _\(1\times 10^{6}\)_. There are no errorneous values. However, checking the **Date** column, we can spot two different formats as presented by the code below: either in "**dd/mm/yy**" or "**dd-mm-yy**". Thus, we must unify the formats. 
 
 ```{r, cache=TRUE, warning=FALSE, message = FALSE, comment=NA, fig.cap="Frequency of weekly sales", fig.width=5, fig.height=3, fig.align="center"}
 #class of variables
@@ -103,9 +108,8 @@ dat%>%group_by(Weekly_Sales)%>%
   scale_fill_brewer(palette = "Spectral")+guides(color = "none")+
   labs(title = "Histogram of Weekly_Sales", y = "count", x = "weekly sales($)", 
        caption="Walmart Stores Sales")
-
 ```
-The following code converts all dates into "**dd-mm-yy**" format. Then, create a column **Day_class** based on **Holiday_Flag** to reflect the holiday names. A new dataset is created, namely, **ndat**. Now we have the dataset ready for analysis.  
+Using the following code, I convert all dates into "**dd-mm-yy**" format. Then, create a column **Day_class** based on **Holiday_Flag** to reflect the holiday names. A new dataset is then created, named **ndat** and the weeks with special and normal days are listed below. Now, we have a dataset ready to proceed for analysis.   
 
 ```{r, cache=TRUE, warning=FALSE, message = FALSE, comment=NA}
 # Date format conversion 
@@ -113,6 +117,7 @@ ndat<-dat%>%mutate(Date=dmy(dat$Date),nDate=as.numeric(Date))%>%mutate(
   Holiday_Flag=factor(Holiday_Flag),
   Day_class=ifelse(Holiday_Flag==1,"Holiday","Normalday")
 )
+# setup holidays
 index<-as.character(ndat$Date)%in%c("2010-02-12","2011-02-11","2012-02-10","2013-02-08")
 ndat$Day_class[index]<-"Super_Bowl"
 index<-as.character(ndat$Date)%in%c("2010-09-10","2011-09-09","2012-09-07","2013-09-06")
@@ -121,32 +126,37 @@ index<-as.character(ndat$Date)%in%c("2010-11-26","2011-11-25","2012-11-23","2013
 ndat$Day_class[index]<-"Thanksgiving"
 index<-as.character(ndat$Date)%in%c("2010-12-31","2011-12-30","2012-12-28","2013-12-27")
 ndat$Day_class[index]<-"Christmas"
-ndat%>%count(Day_class)
+
+# unique dates count
+subset(ndat, !duplicated(subset(ndat, select=Date)))%>%count(Day_class)%>% knitr::kable(caption = "Date counts")%>%
+  column_spec(1, width = "3cm")%>%column_spec(2, width = "3cm")%>%
+  kable_styling(latex_options = c("striped", "center"))
 ```
 ## Exploratory Analysis
 
-  Because the sales are ordered by date, first, let us investigate the date information. The code below shows there are _143_ records uniformly for all store and the recording day is **Friday**. The following map further shows the dates for all stores with holidays marked, proving the correctness of our date conversion. Also, we know further that the The start date is `r min(ndat$Date)` and ending date is `r max(ndat$Date)`. Therefore, we have only full year data for _2011-, but not _2010_ and _2012_.
+  Because the weekly sales are ordered by date, let us investigate the date information first. The code below shows there are _143_ records uniformly for all store and the recording day is **Friday** for each week. The map next further shows the dates for all stores with holidays marked. It proves the correctness of our date conversion. Also, we know that the start date is `r min(ndat$Date)` and ending date is `r max(ndat$Date)`. Therefore, we only have full year data for _2011_, but not _2010_ and _2012_.
 
 ```{r, cache=TRUE, warning=FALSE, message = FALSE, comment=NA}
-# Check days
+
+# check days
 ndat%>%group_by(Store)%>%summarise(sum=n())%>%.$sum
 
 # how many week days 
 ndat%>%mutate(weekday=weekdays(Date))%>%summarize(week_days=unique(weekday))
 ```
-```{r, cache=TRUE, warning=FALSE, message = FALSE, comment=NA, fig.cap="Date distribution of stores", fig.width=6, fig.height=4, fig.align="center"}
+```{r, cache=TRUE, warning=FALSE, message = FALSE, comment=NA, fig.cap="Date distribution of stores", fig.width=6, fig.height=5, fig.align="center"}
 # check date distribution
 ndat%>%group_by(Date)%>%ggplot(aes(Date,Store,color=Day_class))+geom_point(size=0.01)+
   labs(title = "Map of dates", y = "store", x = "dates", caption="Walmart Stores Sales")
 ```
-Next, let us try to answer the questions one by one assigned by **Basic statistics tasks** above.
+Next, let us try to answer the questions one by one assigned by **basic statistics tasks** above.
 
 ### Task 1 and 2: Store with maximum sales and store with maximum standard deviation and its coefficient of mean
 
-  The figure below shows the **total store sales** with respect to the store number in all _143_ weeks. The sales look random. Nevertheless, we can easily identify that Store _20_ has the maximum accumulated sales. 
-
+  The figure below shows the **total store sales** with respect to the store number in all _143_ weeks. The sale values look random. Nevertheless, we can easily identify that Store _20_ has the maximum accumulated sales. 
 
 ```{r, cache=TRUE, warning=FALSE, message = FALSE, comment=NA, fig.cap="Total store sales for all 45 stores", fig.width=5, fig.height=3, fig.align="center"}
+
 # store total sales 
 ndat%>%group_by(Store)%>%summarize(whole_sale=sum(Weekly_Sales))%>%
   ggplot() +
@@ -155,10 +165,11 @@ ndat%>%group_by(Store)%>%summarize(whole_sale=sum(Weekly_Sales))%>%
   labs(title = "Plot of total store sales", y = "sales", x = "store number",
        caption="Walmart Stores Sales")
 ```
-The next figure shows the **mean store sales** with respect to the store number with error bars. Similar to the total sales, the **mean store sales** are look random. Store _20_ again is the top store with the highest **mean store sales**. The figure following shows the standard deviations and the standard errors for each store. Clearly Store _14_ has the maximum standard deviation. 
+The next figure shows the **mean store sales** with respect to the store number with error bars. Same to the total sales, the **mean store sales** look random and store _20_ of course is the store with the highest **mean store sales**. The error bars are much small compared to the sales and smaller the sales, smaller error bars. That means that the sales of each store are predictable with little uncertainty. The figure following shows the standard deviations and the standard errors for each store. Obviously Store _14_ has the maximum standard deviation. 
 
-```{r,  cache=TRUE, figures-mean, cache=TRUE, warning=FALSE, message = FALSE, comment=NA, fig.cap="Mean sales of all stores", fig.width=5, fig.height=5}
-# store sales mean barplot
+```{r,  cache=TRUE, figures-mean, cache=TRUE, warning=FALSE, message = FALSE, comment=NA, fig.cap="Mean sales with error bar of all stores", fig.width=5, fig.height=5}
+
+# store sales mean errorbar plot 
 ndat%>%group_by(Store)%>%summarize(sale_mean=mean(Weekly_Sales),
                                    std=sd(Weekly_Sales),n=n())%>%
   mutate(low=sale_mean-std/sqrt(n),high=sale_mean+std/sqrt(n))%>%
@@ -182,7 +193,7 @@ ndat%>%group_by(Store)%>%summarize(sale_mean=mean(Weekly_Sales),std=sd(Weekly_Sa
        y = "error", x = "store number", caption="Walmart Stores Sales")
 ```
 
-  Further investigation below can also prove the conclusion above. Store _20_ has the maximum **total store sales** and the maximum **mean store sales**, which are _$301397792_ and _$2107677_ respectively. Meanwhile, Store _14_ has the **mean store sales** of _$317570_.  
+  Further investigation below can also prove the conclusion above. Store _20_ has the maximum **total store sales** and the maximum **mean store sales**, which are _$301397792_ and _$2107677_ respectively. Meanwhile, Store _14_ has the **mean store sales** of _$2020978_ and the maximum **standard deviation** of _$317570_.  
   
 ```{r,  cache=TRUE, warning=FALSE, message = FALSE, comment=NA}
 
@@ -208,9 +219,9 @@ mStd_store<-ndat%>%group_by(Store)%>%summarize(sale_mean=mean(Weekly_Sales),
 mStd_store
 
 ```
- Now let us compute the **variation coefficient** required by Task _2_. It is defined as:
- \[c=\frac{\sigma}{\mu}\],
- where \(c\) denotes the coefficient, \(\mu\) denotes the **mean** and \(\sigma\) denotes the **standard deviation**. So that, the coefficient for Store _14_ is:
+ Now let us compute the **variation coefficient** required by Task _2_. Its definition is:
+ \[c=\frac{\sigma}{\mu}\]
+ where \(c\) denotes the coefficient, \(\mu\) denotes the **mean** and \(\sigma\) denotes the **standard deviation**. So that, the coefficient for Store _14_ can be derived by:
    
 ```{r,  cache=TRUE, warning=FALSE, message = FALSE, comment=NA}
  coeff<-mStd_store$max_standard_deviation/mStd_store$store_mean
@@ -218,94 +229,94 @@ mStd_store
 ``` 
 ### Task 3: Store(s) with good quarterly growth in Q3, 2012
 
-  Regarding to the growth issue of Q3, 2012, let us assume the **good quarterly growth** store is the store who has **positive** quarterly **sale increase**. First, I read in the sales data of Q2 and Q3 stored in the data frame, **_q2\_3\_sales_** below. Second, the code below shows there are _13_ weeks for each quarter. Therefore, it is fair to compare the quarterly sales directly. The figure next shows the bar plot of the total sales for all store in Q2 and Q3. Intuitively, we can recognize that the majority stores lost money in Q3, 2012.
+  Regarding to the growth issue of Q3, 2012, let us assume the store with **good quarterly growth** is that who has **positive** quarterly sale growth. First, I read the sales data of Q2 and Q3 into a new data frame, **_q2\_3\_sales_** below. Second, the code chunk counting week numbers for the quarters can prove that there are _13_ weeks for each quarter. Therefore it is fair to compare the two quarterly sales directly. The figure further down shows the bar plot of the total sales for all store in Q2 and Q3. Intuitively, we can find that the majority stores have worse sales in Q3, 2012.
 ```{r,  cache=TRUE,  warning=FALSE, message = FALSE, comment=NA, fig.cap="Standard deviation and standard error", fig.width=6, fig.height=3, fig.align="center"}  
 # Q3 2012 growth
-# all Q 2&3 2012 sales
+# all Q 2 & 3 2012 sales
 q2_3_sales_all<-ndat%>%filter(Date>"2012-03-31"&Date<"2012-10-01")%>%
   mutate(quarter=ifelse(Date>"2012-06-30",3,2))
 
 # count weeks
-q2_3_sales_all%>%filter(Store==1)%>%count(quarter)
+q2_3_sales_all%>%filter(Store==1)%>%count(quarter)%>% 
+  knitr::kable(caption="Week numbers of Q2 and Q3")%>%
+  column_spec(1, width = "3cm")%>%column_spec(2, width = "3cm")%>%
+  kable_styling(latex_options = c("striped","hold_position"))
 
-# select Q 2&3 sales
+#  compute quarterly sales for Q 2 & 3 
 q2_3_sales<-q2_3_sales_all%>% group_by(Store,quarter)%>%
   summarize(quarter_sales=sum(Weekly_Sales))%>%
   mutate(Store=as.factor(Store),quarter=as.factor(quarter))
-# Q 2&3 2012 sales plot
-q2_3_sales%>%arrange(quarter)%>%ggplot(aes(Store,quarter_sales,fill=quarter))+
+
+# Q 2 & 3 2012 quarterly sales plot
+q2_3_sales%>%group_by(quarter)%>%ggplot(aes(Store,quarter_sales,fill=quarter))+
   geom_col(position = "dodge")+
  scale_fill_manual(values = alpha(c("blue", "red"), .9))+
 labs(title = "Plot of store sales, quater 2&3, 2012", y = "sales", 
      x = "store number", caption="Walmart Stores Sales")
-
 ```
-  Next, the following code computes the Q3 growth in terms of **increases** in **Dollar** values and relative **percentage** values. The two side by side figures show the **store sale growth**. The green dash lines marks the **zero** increase point. Clearly, the most stores' **sale growth** is negative. However, there **_10_** stores reached positive increase and Store **_7_** performed best, in terms of both the total Dollars and percentages. It achieved a **_13.3%_** quarterly increase. Therefore, `r 10/45*100` percent stores have a good quarter in Q3, 2012. 
+  Next, I compute the Q3 growth of **growth** in **Dollar** values and relative **percentage** values in the following chunk of code. The next two side by side figures show the **store sale growth** in terms of total sales and percentage. The green dash lines marks the **zero growth** point. Clearly, the most stores' **sale growth** is negative in Q3, 2012. However, we can figure out that there are **_10_** stores have positive growth. Store **_7_** is the best performer. It has achieved a **_13.3%_** quarterly increase. As a summary, `r 10/45*100` percent stores have a good quarter in Q3, 2012. 
 
 ```{r,  cache=TRUE, figures-side2, fig.show="hold", out.width="50%",warning=FALSE, message = FALSE, comment=NA, fig.cap="Store growth of Q3, 2012", }
 # Q3 growth compute & plot
 
-# Q3 absolute growth
+# Q3 absolute growth in dollars
 q3_abs_grow<-q2_3_sales%>%group_by(Store)%>%
   summarize(quarter_grow=(quarter_sales-lag(quarter_sales)))%>%
   filter(!is.na(quarter_grow))
 
-# Q3 abs&relative growth
+# Q3 relative growth in percentage
 q3_grow<-q2_3_sales%>%filter(quarter==2)%>%left_join(q3_abs_grow)%>%
   mutate(percent=quarter_grow/quarter_sales*100,Store=as.numeric(Store))
-
-# Q3 abs&relative growth
-q3_grow<-q2_3_sales%>%filter(quarter==2)%>%left_join(q3_abs_grow)%>%
-  mutate(percent=quarter_grow/quarter_sales*100,Store=as.numeric(Store))
-
-# good performance stores 
-good_quart_store<-q3_grow%>%ungroup()%>%summarize(best_dollar=max(quarter_grow), best_dollar_store=Store[which.max(quarter_grow)],
-                                       best_percent=max(percent),best_percent_store=Store[which.max(percent)])
-good_quart_store<-q3_grow%>%subset(quarter_grow>0)%>%
-  select(Store,quarter_grow, percent)%>%arrange(desc(percent))
-good_quart_store
 
 # Q3 abs growth plot 
 q3_grow%>%ggplot(aes(x=Store)) +
   geom_line(aes(y=quarter_grow), size=1, color="red") +geom_point(aes(y=quarter_grow))+ 
   scale_color_discrete(name="Growth",labels=c("Absolute value","Percentage"))+
   geom_hline(yintercept=0,size=1., color="green",linetype="dashed")+ 
-  labs(title = "Plot of store sales growth, quater 3, 2012", x="store number", y="sales growth ($)", caption="Walmart Stores Sales")
+  labs(title = "Plot of store sales growth, quater 3, 2012", x="store number", 
+       y="sales growth ($)", caption="Walmart Stores Sales")
 
 # Q3 relative growth plot 
 q3_grow%>%ggplot(aes(x=Store)) +
   geom_line(aes(y=percent), size=1, color="blue") +geom_point(aes(y=percent))+ 
     geom_hline(yintercept=0,size=1., color="green",linetype="dashed")+ 
-  labs(title = "Plot of store sales growth, quater 3, 2012", x="store number", y="sales growth (percentage)", caption="Walmart Stores Sales")
+  labs(title = "Plot of store sales growth, quater 3, 2012", x="store number",
+       y="sales growth (percentage)", caption="Walmart Stores Sales")
 ```
-They are listed by the chunk of code as follows.
+The store names with **good growth** are listed in the table created by the code below ordered descendingly by the **percentage increment**. Please note that Stores _7_ and _16_ are the top two stores with more than _5%_ growth.
 ```{r,  cache=TRUE,warning=FALSE, message = FALSE, comment=NA}
-# good performance stores 
-good_quart_store<-q3_grow%>%ungroup()%>%summarize(best_dollar=max(quarter_grow), best_dollar_store=Store[which.max(quarter_grow)],
-                                       best_percent=max(percent),best_percent_store=Store[which.max(percent)])
+# table of good performance stores 
 good_quart_store<-q3_grow%>%subset(quarter_grow>0)%>%
   select(Store,quarter_grow, percent)%>%arrange(desc(percent))
-good_quart_store
+good_quart_store%>% knitr::kable(caption = "Stores with good growth")%>%
+  column_spec(1, width = "3cm")%>%column_spec(2, width = "3cm")%>%
+  column_spec(3, width = "3cm")%>%
+  kable_styling(latex_options = c("striped","hold_position"))
 ```
-
+\newpage
 ### Task 4: Holidays with higher sales than the mean sales in non-holidays for all stores
   
-  For  "holidays with higher sales than the mean sales in non-holidays for all stores", first, we split the holiday and non-holiday sales. Then, compute the holiday means and the non-holiday mean for each store in the following chunk of codes. The figure further shows that the box plot of the holidays' weekly sales compared to their means  and the mean weekly sales for all stores. From the figure and the numbers, we can derive that except **Christmas**, the other _3_ holidays have higher mean sales than the non-holidays' mean sales, although the **Labor day's** is very close. The **Thanksgiving** sale is the highest, probably because of **Black Friday**. Moreover, it is very interesting to that the **uncertainty** increases along with the sales. As a reference, the box plot of the non-holiday store sales is also present here. The stores with smaller sales also has smaller uncertainty.           
+  First, let us split the dataset **ndat** into two datasets: **holiday_sale** and **non_holiday sale**. Then, compute the holiday mean sales and the non-holiday mean sale for each store in the following chunk of code. The figure after shows the box plot of the holidays' weekly sales overlaid by their means and the mean sale for all stores. From the figure and the print-out numbers , we can derive that _3_ holidays have higher mean sales than the non-holidays' mean sale except **Christmas**, though the **Labor day's** is very tight. Of them, the **Thanksgiving** sale is the highest, probably because of **Black Friday**. Moreover, it is very interesting to note that the **uncertainty** increases along with the sales. As a reference, the box plot of the non-holiday store sales is also present next. It again shows a similar pattern: the stores with smaller sales has smaller uncertainty.           
 
 ```{r,  cache=TRUE, warning=FALSE, message = FALSE, comment=NA}
 
 # holiday store sale 
 holiday_sale<-ndat%>%filter(Holiday_Flag==1)
 
-# holiday store mean sale per individual holiday 
-holiday_mean<-ndat%>%filter(Holiday_Flag==1)%>%group_by(Day_class)%>%summarize(mean_sale=mean(Weekly_Sales ))
+# holiday store mean sale for individual holiday 
+holiday_mean<-ndat%>%filter(Holiday_Flag==1)%>%group_by(Day_class)%>%
+  summarize(mean_sale=mean(Weekly_Sales ))
 holiday_mean
 
 # non-holiday store sales
 non_holiday_sale<-ndat%>%filter(Holiday_Flag==0)%>%group_by(Store)
 # non-holiday mean store sales
-non_holiday_mean<-ndat%>%filter(Holiday_Flag==0)%>%ungroup()%>%summarize(nonholiday_mean_sale=mean(Weekly_Sales ))
+non_holiday_mean<-ndat%>%filter(Holiday_Flag==0)%>%ungroup()%>%
+  summarize(nonholiday_mean_sale=mean(Weekly_Sales ))
 non_holiday_mean
+```
+
+```{r,  cache=TRUE,  warning=FALSE, message = FALSE, comment=NA, fig.cap="Store holiday sales vs. non-holiday mean sale", fig.width=5, fig.height=3, fig.align="center"}  
 
 # store sales each holiday compared to non-holiday sales, plot
 holiday_sale%>%group_by(Day_class)%>%mutate(mean_sale=mean(Weekly_Sales))%>%
@@ -315,24 +326,25 @@ holiday_sale%>%group_by(Day_class)%>%mutate(mean_sale=mean(Weekly_Sales))%>%
   geom_text(aes(4,1471273,label="holiday mean", vjust=-0.5),color="blue")+
   geom_hline(yintercept=1041256,size=1., color="red",linetype="dashed")+ 
   geom_text(aes(4,1041256,label="non-holiday mean", vjust=-0.5),color="red")+
-     labs(title = "Plot of store holiday sales", x="store number", y="weekly sales($)", caption="Walmart Stores Sales")
-
+     labs(title = "Plot of store holiday sales", x="store number", 
+          y="weekly sales($)", caption="Walmart Stores Sales")
+```
+```{r,  cache=TRUE,  warning=FALSE, message = FALSE, comment=NA, fig.cap="Store non-holiday sales", fig.width=5, fig.height=3, fig.align="center"}
 # non-holiday sales for each store, plot
-non_holiday_sale%>%mutate(Store=as.factor(Store))%>%ggplot(aes(Store,Weekly_Sales ))+geom_boxplot()+
-labs(title = "Plot of store non-holiday sales", x="store number", y="sales($)", caption="Walmart Stores Sales")
+non_holiday_sale%>%mutate(Store=as.factor(Store))%>%ggplot(aes(Store,Weekly_Sales ))+
+  geom_boxplot()+
+labs(title = "Plot of store non-holiday sales", x="store number", y="sales($)", 
+     caption="Walmart Stores Sales")
 ```
 
-### Task 5 
+### Task 5: Monthly and semester view of sales in units and insights 
 
-  First, I assume the **Semester sale** is **quarterly sale**. The code below creates necessary variables for the analysis: **month**,  **quarter** and **year**. Furthermore, because the weeks are not evenly distributed in each month or quarter, the two side-side figures shows numbers of the weekly sales per store are not evenly distributed as well. Moreover, there are missing **January** for _2010_ and missing **November** and **December**. As a result,  it does not make sense to compute the total sales for each month or quarter rather we focus on the mean values. 
+  First, I could not find the term of **Semester sale** from the references. Therefore, let us just assume the **Semester sale** means **quarterly sale**. The code below creates a new data frame **ndat1** with additional necessary variables for the analysis: **month**, **quarter** and **year**. As shown in the two side-side figures next, the numbers of the weeks for each month or quarter are not uniform in our dataset. Moreover, there are _3_ missing months: **January** for _2010_, and **November** and **December** for _2012_. Thus, it does not make sense to compare the total sales for each month or quarter. Rather, let us focus on the mean or median values in the coming graphic analyses. 
   
-```{r,  cache=TRUE, figures-side3, fig.show="hold", out.width="50%", warning=FALSE, message = FALSE, comment=NA}
+```{r,  cache=TRUE, figures-side3, fig.show="hold", out.width="50%", warning=FALSE, message = FALSE, comment=NA, fig.cap="Week numbers of each month and each quarter"}
 
-# create variables: month, year, quarter
+# new variables: month, year, quarter
 ndat1<-ndat%>%mutate(month=month(Date),year=year(Date))
-
-# delete nDate
-ndat1<-ndat1[-9]
 
 #set up quarters
 ndat1<-ndat1%>%mutate(quarter=1)
@@ -355,13 +367,16 @@ labs(title = "Plot of count of weeks per month", x="month", y="week numbers", ca
 
 # weeks per quarter plot
 ndat1%>%filter(Store==1)%>%ggplot(aes(quarter,fill=year))+geom_bar(position = "dodge")+
-labs(title = "Plot of count of weeks per quarter", x="quarter", y="week numbers", caption="Walmart Stores Sales")
-
+labs(title = "Plot of count of weeks per quarter", x="quarter", y="week numbers", 
+     caption="Walmart Stores Sales")
 
 ```  
-  For the monthly sales, below are  are the box plot of the monthly sales of all stores and the bar plot of the monthly mean sales of the all stores.  Although, there are missing data, we can still find a general pattern. The stores have worst sales in **January**. Then there is a jump in **February**. Interestingly, the month is the **fourth** best month in the year andf much better than the adjacent months. After that, the sales grow gradually up to the **middle** year.  Since then, the sales slide slowly to the **starting** of the holiday season. The best sales come from **November** and **December**, even though we are missing the data for _2012_. Year-wise, _2011_ these stores have a bad year. Most months, the stores have smaller and close sales than the previous year, except **October** and **November**. In year _2012_, the sales bounced back and even better than year _2010_. Also, we notice that the high end outliers in **November** and **December**     
   
-```{r,  cache=TRUE, figures-side4, fig.show="hold", out.width="50%", warning=FALSE, message = FALSE, comment=NA}
+  Considering the monthly sales, below are the box plot of the monthly sales and the bar plot of the monthly mean sales for all stores. Although, there are missing data, we can still find a general pattern. 
+  Basically, the stores have worst sales in **January**. After that, the sales grow gradually up to the **middle** year. Since then, the sales slide down slowly to the **start** of the holiday season. Interestingly, **February** is an outlier. It is the **fourth** best month of each year. The sales jump in the month and are much better than that of the adjacent months. The best sales however come from **November** and **December**, although we are missing the data for _2012_. 
+  Year-wise, in _2011_ the most stores seem have a bad year. Most months, the stores have smaller or close sales than the previous year, except **October** and **November**. In year _2012_, the sales bounced back and are better than year _2010_. Also, please note that the high-end outliers in **November** and **December**, showing the fluctuation in holidays.     
+  
+```{r,  cache=TRUE, figures-side4, fig.show="hold", out.width="50%", warning=FALSE, message = FALSE, comment=NA, fig.cap="Store monthly sales and mean sales for all stores"}
 
 # monthly sale box plot
 ndat1%>%group_by(year,month)%>%
@@ -370,13 +385,12 @@ ndat1%>%group_by(year,month)%>%
 
 # monthly mean sale bar plot
 ndat1%>%group_by(year,month)%>%summarise(mean_sale_month=mean(Weekly_Sales))%>%
-  ggplot(aes(month,mean_sale_month,fill=year))+geom_col(position = "dodge")
+  ggplot(aes(month,mean_sale_month,fill=year))+geom_col(position = "dodge")+
 labs(title = "Plot of monthly mean sales", x="month", y="sale($)", caption="Walmart Stores Sales")
 ```
-  Talking about the quarterly sales, below are  are the box plot and the bar plot of the quarterly mean sales of the all stores. As shown in the monthly figures,  we miss the sales of **January**, year _2010_ and sales of **November** and **December**, 2012. Therefore, we have to exclude the corresponding data of quarter _1_, _2010_ and quarter _4_, _2012_. Looking at the figures below, we can derive 
-a similar pattern. Quarter _1_ is the worst and Quarter _2_ becomes better. Then, Quarter _3_ gets worse. Finally, Quarter _4_ gets a big jump and is the best each year.  
+  For the quarterly sales, below are the box plot of the quarterly sales and the bar plot of the quarterly mean sales of the all stores. As mentioned from above, we miss the sales of **January**, year _2010_ and sales of **November** and **December**, 2012. Therefore, we have to exclude the corresponding data of quarter _1_, _2010_ and quarter _4_, _2012_. Now looking at the figures below, we can derive a similar pattern as the monthly data does. Quarter _1_ is the worst and Quarter _2_ becomes better, then, Quarter _3_ drops again. Finally, Quarter _4_ receives a big jump and it is the best quarter for each year.  
   
-```{r,  cache=TRUE, figures-side5, fig.show="hold", out.width="50%", warning=FALSE, message = FALSE, comment=NA}  
+```{r,  cache=TRUE, figures-side5, fig.show="hold", out.width="50%", warning=FALSE, message = FALSE, comment=NA, fig.cap="Store quaterly sales and mean sales for all stores"}  
 
 # quarterly sale box plot
 ndat1%>%group_by(year,quarter)%>%
@@ -389,14 +403,29 @@ ndat1%>%group_by(year,quarter)%>%summarise(mean_sale_quarter=mean(Weekly_Sales))
   labs(title = "Plot of quaterly mean sales", x="month", y="sale($)", caption="Walmart Stores Sales")
 
 ```  
-Therefore,  
+Summarizing the _5_ task studies above, I put all the answers in the following table. 
 
+
+ Table: Answers for basic statistics tasks
+
+ 
+Basic statistics tasks|Answers  
+  |-------------------------|-------------------|
+  | 1. Store with maximum Sales| Store _20_ has the maximum sales of _$301397792_.|
+   | 2. Store with maximum standard deviation and its coefficient of mean| Store _14_ has the maximum standard deviation of $317570 and its coefficient of variation is _0.157_.  |
+  | 3. Store(s) with good quarterly growth in Q3, 2012| _10_ stores have positive growth and the top two are Stores _7_ and _16_.|
+  | 4. Holidays with higher sales than the mean sales in non-holidays for all stores|Thanksgiving, Super Bowl and Labor Day. |
+   | 5. Monthly and semester view of sales in units and insights| Quart 1 and January are the worst quarter and month respectively, however February is the fourth highest month in each year. Quart 2 is better thank Quarter 1 and Quarter 3. Quarter 4 is always the best. |
+   
 # Modeling Data Analysis
 
-  In section, we address the **Statistical model** task and are going to work the data only for Store _1_. As discussed at beginning, there are _143_ record for the store. The first two figures show the We first create a new dataset called **_ndat2_** by choosing the necessary parameters for the analysis as below. The first figure next shows the distribution of the sales that the sales are symmetric about \(1.5\times 10^6\) with some outliers at the upper side. 
+  Let us revisit the **Statistical model** assignment: **_"prediction models to forecast demand for Store 1: hypothesize if CPI, unemployment, and fuel price have any impact on sale"_**. 
   
-```{r,  cache=TRUE, figures-side6, fig.show="hold", out.width="50%", warning=FALSE, message = FALSE, comment=NA}  
-# Single store sales
+  Per requirement, I am only going to work on the weekly sales data of Store _1_ in this section. For this store, we know, the dataset will have _143_ weekly samples.
+  
+  First, let us have a insight look at Store 1 data. The following two side-by side figures show the monthly and quarterly sales of the store. Unlike what we saw above for all stores' case, Store 1 has  positive growth from year to year. The Q4 decrease of _2012_ is only due to missing data.    
+ 
+```{r,  cache=TRUE, figures-side6, fig.show="hold", out.width="50%", warning=FALSE, message = FALSE, comment=NA, fig.cap="Quaterly weekly sales and mean sales for Store 1"}  
 # Store 1 monthly sale box plot
 ndat1%>%group_by(year,month)%>%filter(Store==1)%>%
   ggplot(aes(month,Weekly_Sales,color=year))+geom_boxplot()+
@@ -406,31 +435,43 @@ ndat1%>%group_by(year,month)%>%filter(Store==1)%>%
 ndat1%>%group_by(year,quarter)%>%filter(Store==1)%>%
   ggplot(aes(quarter,Weekly_Sales,color=year))+geom_boxplot()+
   labs(title = "Plot of quaterly sales", x="month", y="sale($)", caption="Walmart Stores Sales")
+```
+  Since our objective to examine the impact of **CPI**, **Unemployment** and **Fuel_Price** to the weekly sales, let us also have quick look at their behaviors. The next _3_ figures shows the corresponding quarterly variation respectively. The **CPI** demonstrates a distinct pattern: it grows year by year. On the other hand, the **Unemployment** and **Fuel_Price** have another type of pattern. Shown in the figure, the change of the **Unemployment rate** is mixed in the first two year and then it decreases dramatically in _2012_. Meanwhile,  the **Fuel price** stays low in the first year and then it increases dramatically in second year and then, there is no clear boundary in second and third years.   
+
+```{r,  cache=TRUE, warning=FALSE, message = FALSE, comment=NA, fig.cap="Count of CPI", fig.width=4, fig.height=3, fig.align="center"}  
+# quarterly CPI box plot
+ndat1%>%group_by(year,quarter)%>%filter(Store==1)%>%
+  ggplot(aes(quarter,CPI,color=year))+geom_boxplot()+
+  labs(title = "Plot of quaterly CPI", x="month", y="CPI", caption="Walmart Stores Sales")
+
 ```  
-  
-```{r,  cache=TRUE, warning=FALSE, message = FALSE, comment=NA}  
-# create data only for data analysis
-ndat2<-ndat1%>%filter(Store==1)%>%select(Weekly_Sales,Fuel_Price,CPI,Unemployment) 
 
-# histogram plot of sales
-ndat2%>%ggplot(aes(Weekly_Sales))+geom_histogram(fill="blue",color="red")+
-  labs(title = "Histogram of Weekly_Sales", y = "count", x = "weekly sales($)", caption="Walmart Stores Sales")
+```{r,  cache=TRUE, warning=FALSE, message = FALSE, comment=NA, fig.cap="Count of Unemployment", fig.width=4, fig.height=3, fig.align="center"}  
+# quarterly Unemployment box plot
+ndat1%>%group_by(year,quarter)%>%filter(Store==1)%>%
+  ggplot(aes(quarter,Unemployment,color=year))+geom_boxplot()+
+  labs(title = "Plot of quaterly Unemployment", x="month", y="Unemployment", 
+       caption="Walmart Stores Sales")
+```  
 
-```
-The second two figures 
-```{r,  cache=TRUE, figures-side7, fig.show="hold", out.width="50%", warning=FALSE, message = FALSE, comment=NA}  
-
-ndat2%>%ggplot(aes(Fuel_Price,Unemployment, color=Weekly_Sales))+geom_point(size=3)+geom_smooth()+
-  scale_color_gradient2(low="black", mid="yellow", high="white", 
-                        midpoint=1800000, limits=range(ndat2$Weekly_Sales))
-
-ndat2%>%ggplot(aes(Fuel_Price,CPI, color=Weekly_Sales))+geom_point(size=3)+
-  scale_color_gradient2(low="black", mid="yellow", high="white", 
-                        midpoint=1800000, limits=range(ndat2$Weekly_Sales))
-```
+```{r,  figure-fuel, cache=TRUE, warning=FALSE, message = FALSE, comment=NA, fig.cap="Count of Fuel Price", fig.width=4, fig.height=3, fig.align="center"}  
+# quarterly Fuel_Price box plot
+ndat1%>%group_by(year,quarter)%>%filter(Store==1)%>%
+  ggplot(aes(quarter,Fuel_Price,color=year))+geom_boxplot()+
+  labs(title = "Plot of quaterly Fuel_Price", x="month", y="Fuel_Price", 
+       caption="Walmart Stores Sales")
+```  
 
 ## Data Analysis  
-  We partition **_ndat2_** to two parts: the training set, namely **_train_**, and the validation set, **_test_** statistically half to half.
+  
+   First of all, for simplicity, I create a new dataset called **_ndat2_** by choosing the necessary parameters for the analysis as below.
+```{r,  cache=TRUE, warning=FALSE, message = FALSE, comment=NA}  
+  # create data only for data analysis
+ndat2<-ndat1%>%filter(Store==1)%>%select(Weekly_Sales,Fuel_Price,CPI,Unemployment) 
+ 
+```
+
+  Then, let us partition **_ndat2_** to two parts: the training set, namely **_train_**, and the validation set, **_test_** statistically half to half. Here train set has _71_ samples and test set has _72_. After this, we can start our modeling study. 
 
 ```{r,  cache=TRUE, warning=FALSE, message = FALSE, comment=NA}  
 # partition
@@ -438,104 +479,145 @@ set.seed(1, sample.kind = "Rounding")    # if using R 3.6 or later
 test_index <- createDataPartition(ndat2$Weekly_Sales, times = 1, p = 0.5, list = FALSE)
 test <- ndat2[test_index,]
 train <- ndat2[-test_index,]
-
+list(n_train=nrow(train), n_test=nrow(test))
 ```
 ### Linear Models
-  First, let us start with the linear models, assuming:
-   \[Y_{c, u,f} = \mu + b_{c} + b_{u} + b_{f} + \epsilon_{c, u, f}\]
-  where  \({Y}_{c,u,f}\) denotes the weekly sales;  \(\epsilon\) denotes the independent errors;  \(\mu\) is the _mean_ of all _ratings_ of the dataset; \( b_{c}\),  \( b_{u}\) and \( b_{f}\) represent the bias for specific _CPI_, _Un-employment rate_ and _Fuel Price_ respectively. I test this step by step.  
 
-#### Model _1_:
-  Let us consider the simplest model only using \(\mu \), then we run the code below by saving the **RMSE**:
+  First, let us start with a series of linear models. We can setup the models based on the following equation:
+   \[Y_{c, u,f} = \mu + b_{c} + b_{u} + b_{f} + \epsilon_{c, u, f}\]
+  where  \({Y}_{c,u,f}\) denotes the weekly sales;  \(\epsilon\) denotes the independent errors;  \(\mu\) is the _mean_ of all _ratings_ of the dataset; \( b_{c}\),  \( b_{u}\) and \( b_{f}\) represent the bias for specific _CPI_, _Un-employment rate_ and _Fuel Price_ respectively. I test the equation step by step by starting from single variable model, \(\mu\).  
+
+#### Model _1_: \(\mu\) only  
+ 
+  Let us consider the simplest model only using \(\mu \), then we run the code below by saving the **RMSE**. The figure below shows the data mismatch between the test set and their prediction ordered by their row index (_x-axis_). Since the prediction is a single value, \(\mu\), the prediction is just a horizontal line (blue).  
 ```{r,  cache=TRUE, warning=FALSE, message = FALSE, comment=NA}  
 # model 1: mu only
 mu <- mean(train$Weekly_Sales)
 y_hat <- mu
 rmse_1 <- RMSE(y_hat,test$Weekly_Sales)
 rmse_1
-rmse_results <- data_frame(method = "mu Only", RMSE = rmse_1)
+rmse_results <- data_frame(method = "mu Only",model=1, RMSE = rmse_1)
+rmse_results%>% knitr::kable()%>%kable_styling(latex_options = c("striped","hold_position"))
 ``` 
-#### Model _2_: 
-  Let us add in _CPI_ factor while leaving \(\mu\) unchanged. We run the linear regression using _lm_ module in _train_ function:
+```{r,  figure-model1, cache=TRUE, warning=FALSE, message = FALSE, comment=NA, fig.cap="Model 1 data mismatch", fig.width=6, fig.height=4, fig.align="center"} 
+# data mismatch
+plot(test$Weekly_Sales,col="red")
+abline(h=y_hat,col="blue",lwd=2)
+legend(1, 2300000, legend=c("Input", "Predicted"),
+       col=c("red", "blue"), lty=1:2, cex=0.8)
+
+```  
+#### Model _2_: \(\mu\) + CPI  
+
+  Let us add in _CPI_ factor while leaving \(\mu\) unchanged. In this paper, I will use the linear regression module ** _lm_ **  from **caret** package, since it can provide much useful regression information. In the following figure, the prediction line starts showing some features other than a  straight as Model 1, while the **RMSE** values also has decreased. Therefore, Model _2_ better fits than Model _1_ does. 
 ```{r,  cache=TRUE, warning=FALSE, message = FALSE, comment=NA}  
 # model 2: mu + CPI 
 model="lm"
 fit<-train( Weekly_Sales~CPI, method = model, data = train)
 y_hat<-predict(fit, test)
 rmse_2 <- RMSE(y_hat, test$Weekly_Sales)
-rmse_2
 rmse_results <- bind_rows(rmse_results,
-                          data_frame(method = "mu + CPI",
+                          data_frame(method = "mu + CPI",model=2,
                                      RMSE = rmse_2))
+rmse_results%>% knitr::kable()%>%kable_styling(latex_options = c("striped","hold_position"))
+``` 
+```{r,  figure-model2, cache=TRUE, warning=FALSE, message = FALSE, comment=NA, fig.cap="Model 2 data mismatch", fig.width=6, fig.height=4, fig.align="center"} 
+# data mismatch
+plot(test$Weekly_Sales,col="red")
+lines(y_hat,col="blue",lwd=2)
+points(y_hat,col="blue",cex = .5)
+legend(1, 2300000, legend=c("Input", "Predicted"),
+       col=c("red", "blue"), lty=1:2, cex=0.8)
 ```
-#### Model _3_:
-  Adding in _Unemployment_ factor We run the linear regression using _lm_ module in _train_ function:
+
+#### Model _3_: \(\mu\) + CPI + Unemployment 
+
+  Adding in _Unemployment_ factor, re-run the linear regression, the result is shown below. Unfortunately, the **RMSE** here does not reduce. On the contrast, it becomes higher. Also, the prediction line does not change much shown in the figure below.
+
 ```{r,  cache=TRUE, warning=FALSE, message = FALSE, comment=NA}
-# model 3: mu + CPI + Unemployment 
+## model 3: mu + CPI + Unemployment 
 model="lm"
 fit<-train( Weekly_Sales~CPI+Unemployment, method = model, data = train)
 y_hat<-predict(fit, test)
 rmse_3 <- RMSE(y_hat, test$Weekly_Sales)
-rmse_3
 rmse_results <- bind_rows(rmse_results,
-                          data_frame(method = "mu + CPI + Unemployment",
+                          data_frame(method = "mu + CPI + Unemployment",model=3,
                                      RMSE = rmse_3))
+rmse_results%>% knitr::kable()%>%kable_styling(latex_options = c("striped","hold_position"))
 ```
-The **RMSE** here did not reduce, rather it is higher.
+```{r,  figure-model3, cache=TRUE, warning=FALSE, message = FALSE, comment=NA, fig.cap="Model 3 data mismatch", fig.width=6, fig.height=4, fig.align="center"} 
+# data mismatch
+plot(test$Weekly_Sales,col="red")
+lines(y_hat,col="blue",lwd=2)
+points(y_hat,col="blue",cex = .5)
+legend(1, 2300000, legend=c("Input", "Predicted"),
+       col=c("red", "blue"), lty=1:2, cex=0.8)
+```
+\newpage
 
-#### Model _4_:
+#### Model _4_: \(\mu\) + CPI + Unemployment + Fuel Price
 
-  Furthermore, we consider the  _Fuel Price_ factor.
+  Finally, let us consider the _Fuel Price_ factor. As shown in the following table, the **RMSE** increases further. In the same time, the prediction line in the mismatch figure does not change much either. 
 ```{r,  cache=TRUE, warning=FALSE, message = FALSE, comment=NA}
 # model 4: mu + CPI + Unemployment + Fuel_Price
 model="lm"
 fit<-train( Weekly_Sales~CPI+Unemployment+Fuel_Price, method = model, data = train)
 y_hat<-predict(fit, test)
 rmse_4 <- RMSE(y_hat, test$Weekly_Sales)
-rmse_4
 rmse_results <- bind_rows(rmse_results,
-                          data_frame(method = "mu + CPI + Unemployment + Fuel_Price",
+                          data_frame(method = "mu + CPI + Unemployment + Fuel_Price",model=4,
                                      RMSE = rmse_4))
-#fit$finalModel
+rmse_results%>% knitr::kable()%>%kable_styling(latex_options = c("striped","hold_position"),
+                                               position = "center")
+```
+```{r,  figure-model4, cache=TRUE, warning=FALSE, message = FALSE, comment=NA, fig.cap="Model 4 data mismatch", fig.width=6, fig.height=4, fig.align="center"} 
+# data mismatch
+plot(test$Weekly_Sales,col="red")
+lines(y_hat,col="blue",lwd=2)
+points(y_hat,col="blue",cex = .5)
+legend(1, 2300000, legend=c("Input", "Predicted"),
+       col=c("red", "blue"), lty=1:2, cex=0.8)
+```
+As a summary of the linear model tests, the **RMSE** increased with increase of the complexity of the models, such that the linear regression seems cannot properly model our data. Nevertheless, the **importance** function may give us some hints. As shown below, the importance function shows that _CPI_ is the dominant factor here. The other two have extremely limited contribution. Therefore, we may need look for alternatives.
+```{r,  cache=TRUE, warning=FALSE, message = FALSE, comment=NA}
 varImp(fit)  
 ```
-Again, the **RMSE** increased. Moreover, from the importance function shows that _CPI_ is a dominant factor here. Therefore, the linear model method cannot handle the multiple variables problem well. 
 
 ## Nonlinear Models
-  Since linear modeling has the weakness, we introduce two nonlinear models based on **_knn_** and  **_random forest_** methods, plus cross validation. 
 
-#### Model _5_:
-  Here we use **_k-nearest neighbors_** method. It can be used for both categorical and continuous variables. Let us tune the fold. because we have totally _71_ records in the train set. I choose maximum _k_ as 71. The automatic solution of optimal _k_ is _27_. The **RMSE** reduced this time.  
+  Since linear modeling has the weakness, I introduce two nonlinear models here. One is  **_K-Nearest Neighbors_** method and the other is  **_Random Forests_** method, plus cross validation.  
+
+#### Model _5_: K-Nearest Neighbors
+
+  **_K-Nearest Neighbors_** method is well known in data analysis. It can be used on both categorical and continuous variables while our data belongs to continuous category. As shown below, I use the three independent variables, **CPI**, **Unemployment** and **Fuel_Price**, simultaneously as the input. In Regard to the **cross validation**, I tune the fold number _k_.  Meanwhile, since we have totally _71_ records in the train set, I choose the maximum _k_ as _71_. 
+  
+  Now let us look at the result. as shown in the table, the **RMSE** has decreased this time. The fitting curve shows the optimal _k_ as _27_.  Also the prediction line shows more features than the linear models above.    
 
 ```{r,  cache=TRUE, warning=FALSE, message = FALSE, comment=NA, fig.cap="knn cross validation curve", fig.width=4, fig.height=3, fig.align="center"}
 
 #model 5: knn:  mu + CPI + Unemployment + Fuel_Price
-set.seed(2000, sample.kind = "Rounding")
+set.seed(2, sample.kind = "Rounding")
 model="knn"
 train_control <- trainControl(method="cv", number=5, p=0.9)
 fit<-train( Weekly_Sales~CPI+Unemployment+Fuel_Price, method = model, data = train,
             tuneGrid = data.frame(k = seq(1, 71, 2)),trControl=train_control)
 
-ggplot(fit)
- 
 y_hat<-predict(fit, test)
 rmse_5 <- RMSE(y_hat, test$Weekly_Sales)
-rmse_5
 rmse_results <- bind_rows(rmse_results,
-                          data_frame(method = "knn: mu + CPI + Unemployment + Fuel_Price",
+                          data_frame(method = "knn: mu + CPI + Unemployment + Fuel_Price",model=5,
                                      RMSE = rmse_5))
-```
-```{r,  cache=TRUE, warning=FALSE, message = FALSE, comment=NA, table }
-fit$results%>% knitr::kable()%>%kable_styling(latex_options = c("striped","hold_position","scale_down"))
-
-rmse_results %>% knitr::kable()
+rmse_results%>% knitr::kable()%>%kable_styling(latex_options = c("striped","hold_position"),
+                                               position = "center")
 
 #minimum k
 fit$results$k[which.min(fit$results$RMSE)]
+ggplot(fit)
 
 ```
 
-```{r,  cache=TRUE, warning=FALSE, message = FALSE, comment=NA, fig.cap="Predicted-real data comparison", fig.width=4, fig.height=3, fig.align="center"}
+
+```{r,  cache=TRUE, warning=FALSE, message = FALSE, comment=NA, fig.cap="Model 5 data mismatch", fig.width=6, fig.height=4, fig.align="center"}
 plot(test$Weekly_Sales,col="red")
 lines(y_hat,col="blue",lwd=2)
 points(y_hat,col="blue",cex = .5)
@@ -543,22 +625,32 @@ legend(1, 2300000, legend=c("Input", "Predicted"),
        col=c("red", "blue"), lty=1:2, cex=0.8)
 
 ```
-#### Model _6_:
-  We try **_random forests** method here with cross-validation also. 
+#### Model _6_: Random Forests
+
+ Let us try another nonlinear method, **_Random Forests**. It also works for categorical and continuous variables. Same as Model 5, the input also contains all the three independent variables together. In regards to **cross validation**, I tune parameter, _mtry_, ranging from _1_ to _7_.
+  
+  As shown in the table below, the **RMSE** has been reduced below that of Model 5. The fitting curve also shows the optimal _mtry_ as _1_. Looking at the mismatch plot below, the prediction has much more features than all the models above. The result from the importance function below also provides further insight. It shows that _CPI_ is still the most dominant factor, but the weight of the _Fuel_Price_ went up dramatically from the about _5%_ in Model 3 to _75.9%_ here. Consequently, the **Random Forests**, thus, brought us the best fitting model.
+ 
 ```{r,  cache=TRUE, warning=FALSE, message = FALSE, comment=NA, fig.cap="random forests cross validation curve", fig.width=4, fig.height=3, fig.align="center"}
 set.seed(3, sample.kind = "Rounding")
 model="rf"
-fit<-train( Weekly_Sales~CPI+Unemployment+Fuel_Price, method = model, data = train, tuneGrid = data.frame(mtry = seq(1:7)),
-            ntree=100)
+fit<-train( Weekly_Sales~CPI+Unemployment+Fuel_Price, method = model, data = train, 
+            tuneGrid = data.frame(mtry = seq(1:7)), ntree=100)
 y_hat<-predict(fit, test)
 rmse_6 <- RMSE(y_hat, test$Weekly_Sales)
-rmse_6
 rmse_results <- bind_rows(rmse_results,
                           data_frame(method = "rf: mu + CPI + Unemployment + Fuel_Price",model=6,
                                      RMSE = rmse_6))
+rmse_results%>% knitr::kable()%>%
+  kable_styling(latex_options = c("striped","hold_position"),position = "center")
+
+#minimum mtry
+fit$results$mtry[which.min(fit$results$RMSE)]
+ggplot(fit)
+
 varImp(fit)
 ```
-```{r,  cache=TRUE, warning=FALSE, message = FALSE, comment=NA, fig.cap="knn cross validation curve", fig.width=4, fig.height=3, fig.align="center"}
+```{r,  cache=TRUE, warning=FALSE, message = FALSE, comment=NA, fig.cap="Model 6 data mismatch", fig.width=6, fig.height=4, fig.align="center"}
 
 # data mismatch
 plot(test$Weekly_Sales,col="red")
@@ -569,11 +661,17 @@ legend(1, 2300000, legend=c("Input", "Predicted"),
 ```
 # Conclusion
 
-  I this project, I have completed two types of tasks assigned by the author with nonlinear approach. The **Basic statistics tasks** tasks were accomplished in section **2.2**. Meanwhile, **_six_** prediction models were tried in section **3**. The linear model did not work well here. With increasing predictors, the **RMSE** did not decreased accordingly. Moreover, I tried two nonlinear models of ** K-nearest neighbors** and  **random forests** with **cross validation**. It turns out that the nonlinear Models provide much smaller **RMSE** compared to linear models. Also, I find that the most important factor is **CPI** and **Unemployment** almost has no contribution to the sales. 
-  Furthermore, the data mismatch plots show that there are still big errors so that more study is necessary. Also, the store sales provides quite lot information. What I have done still pieces of. There is a lot of useful information to explore in the future. In the future, I may study the effect of the **Date, Holiday**and other factors and possible other algorithms on the all contributors. 
+  In conclusion, in this project, I have completed two types of tasks assigned by the author. First, the **Basic statistics tasks** tasks were successfully accomplished in section **2.2** with clear conclusions. 
+  
+  Second, I have tried **_six_** prediction models were in section **3** using both **linear **and **nonlinear** approaches to address **Statistical Model** issue. The linear model did not work well here. With increased predictors, the **RMSE** did not decrease accordingly. Rather it has been increasing. As alternatives, I tried two more nonlinear models, **K-Nearest Neighbors** and  **Random Forests**, with **cross validation**. It turns out that the nonlinear Models can produce much better fitting models. Their **RMSEs** are smaller than the linear models and **Random Forests** behaves as the best model. It brought a _183330_ **RMSE**. Moreover, I also find that the most important factor is **CPI**. The dominance of the **Fuel_Price** increased after adopting nonlinear method. However, the importance of the **Unemployment** is _0_ for all methods. We may conclude that **Unemployment** has little impact to the **weekly sales** whereas **CPI** and **Fuel_Price** do have wieghted by their dominance. 
+  
+  Finally, the data mismatch plot of our best model, Model 6, still shows that there are still big mismatch between the data and prediction. Therefore, there must be big room to improve our modeling methods and more study is necessary. For instance, we maybe introduce more input factors, like, Holiday, and try more advanced algorithms, etc. 
+  
+  Furthermore, the store sales dataset provides lot information and we only tested the data based on Store 1. The other stores' data may give us more insights about the in-store sales. In the future, we may look into other stores.  
 
 # Reference
 
 * https://courses.edx.org/courses/course-v1:HarvardX+PH125.8x+2T2020/course/
   
 * https://www.kaggle.com/aditya6196/retail-analysis-with-walmart-data
+`

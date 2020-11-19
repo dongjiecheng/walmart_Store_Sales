@@ -303,6 +303,24 @@ ndat1%>%group_by(year,quarter)%>%filter(Store==1)%>%
   ggplot(aes(quarter,Weekly_Sales,color=year))+geom_boxplot()+
   labs(title = "Plot of quaterly sales", x="month", y="sale($)", caption="Walmart Stores Sales")
 
+
+# quarterly CPI box plot
+ndat1%>%group_by(year,quarter)%>%filter(Store==1)%>%
+  ggplot(aes(quarter,CPI,color=year))+geom_boxplot()+
+  labs(title = "Plot of quaterly CPI", x="month", y="CPI", caption="Walmart Stores Sales")
+
+# quarterly Unemployment box plot
+ndat1%>%group_by(year,quarter)%>%filter(Store==1)%>%
+  ggplot(aes(quarter,Unemployment,color=year))+geom_boxplot()+
+  labs(title = "Plot of quaterly Unemployment", x="month", y="Unemployment rate", caption="Walmart Stores Sales")
+
+
+# quarterly Fuel_Price box plot
+ndat1%>%group_by(year,quarter)%>%filter(Store==1)%>%
+  ggplot(aes(quarter,Fuel_Price,color=year))+geom_boxplot()+
+  labs(title = "Plot of quaterly Fuel_Price", x="month", y="Fuel_Price", caption="Walmart Stores Sales")
+
+
 # create data only for data analysis
 ndat2<-ndat1%>%filter(Store==1)%>%select(Weekly_Sales,Fuel_Price,CPI,Unemployment) 
   
@@ -319,10 +337,23 @@ ndat2%>%ggplot(aes(Weekly_Sales,CPI))+geom_point()+
 
 
 
-# 
+# histogram of CPI
+ndat2%>%group_by(CPI)%>%ggplot(aes(CPI))+geom_histogram()+
+labs(title = "Plot of CPI distribution", y = "count", x = "CPI", caption="Walmart Stores Sales")
+
+
+# histogram of Unemployment
+ndat2%>%group_by(Unemployment)%>%ggplot(aes(Unemployment))+geom_histogram()+
+labs(title = "Plot of Unemployment distribution", y = "count", x = "Unemployment rate", caption="Walmart Stores Sales")
+
+
+# histogram of Fuel_Price
+ndat2%>%group_by(Fuel_Price)%>%ggplot(aes(Fuel_Price))+geom_histogram()+
+labs(title = "Plot of Fuel_Price distribution", y = "count", x = "Fuel_Price", caption="Walmart Stores Sales")
+
+
 hist(ndat2$CPI)
 hist(ndat2$Unemployment)
-hist(ndat2$Temperature)
 hist(ndat2$Fuel_Price)
 
 # partition
@@ -482,4 +513,49 @@ test_index <- createDataPartition(ndat3$Weekly_Sales, times = 1, p = 0.5, list =
 test1 <- ndat3[test_index,]
 train1 <- ndat3[-test_index,]
 
+
+# model 1: mu only
+mu <- mean(train$Weekly_Sales)
+y_hat <- mu
+rmse_1 <- RMSE(y_hat,test$Weekly_Sales)
+rmse_1
+rmse_results <- data_frame(method = "mu Only", model=1, RMSE = rmse_1)
+
+# model 2: mu + CPI 
+model="lm"
+contrl <- trainControl(method = "cv", number = 5)
+
+fit<-train( Weekly_Sales~CPI, method = model, data = train,trControl = contrl)
+y_hat<-predict(fit, test)
+rmse_2 <- RMSE(y_hat, test$Weekly_Sales)
+rmse_2
+rmse_results <- bind_rows(rmse_results,
+                          data_frame(method = "mu + CPI",
+                                     model=2, RMSE = rmse_2))
+
+# model 3: mu + CPI + Unemployment 
+model="lm"
+contrl <- trainControl(method = "cv", number = 5)
+fit<-train( Weekly_Sales~CPI+Unemployment, method = model, data = train,trControl = contrl)
+fit<-train( Weekly_Sales~CPI+Unemployment, method = model, data = train)
+y_hat<-predict(fit, test)
+rmse_3 <- RMSE(y_hat, test$Weekly_Sales)
+rmse_3
+rmse_results <- bind_rows(rmse_results,
+                          data_frame(method = "mu + CPI + Unemployment",
+                                     model=3, RMSE = rmse_3))
+
+# model 4: mu + CPI + Unemployment + Fuel_Price
+model="lm"
+contrl <- trainControl(method = "cv", number = 5)
+fit<-train( Weekly_Sales~CPI+Unemployment+Fuel_Price, method = model, data = train,trControl = contrl)
+fit<-train( Weekly_Sales~CPI+Unemployment+Fuel_Price, method = model, data = train)
+y_hat<-predict(fit, test)
+rmse_4 <- RMSE(y_hat, test$Weekly_Sales)
+rmse_4
+rmse_results <- bind_rows(rmse_results,
+                          data_frame(method = "mu + CPI + Unemployment + Fuel_Price",
+                                     model=4, RMSE = rmse_4))
+fit$finalModel
+varImp(fit)
 
